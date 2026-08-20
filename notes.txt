@@ -1,0 +1,25 @@
+OpenMC Event-Based Parallelism
+===============================
+
+settings::event_based selects OpenMC's event-based transport algorithm instead
+of the default history-based algorithm.
+
+- History-based: OpenMC follows one particle through its entire history before
+  moving to the next.
+- Event-based: OpenMC keeps many particles in memory and groups work by event
+  type, such as moving particles, collisions, and surface crossings.
+
+Event-based mode can improve CPU/GPU-style parallel efficiency and data locality
+for large problems, but it uses more memory. Its buffer size is controlled by
+settings.max_particles_in_flight (default: 100000).
+
+Enable it in Python with:
+
+    settings.event_based = True
+
+or at runtime with:
+
+    openmc.run(event_based=True)
+
+For a small water-block example, it is unlikely to help much; the default
+history-based mode is the straightforward choice.
