@@ -114,6 +114,8 @@ public:
   //! create a particle restart HDF5 file
   void write_restart() const;
 
+  void update_proton_xs(int i_nuclide);
+
   //! Update microscopic cross section cache
   //
   //! \param[in] i_nuclide Index in data::nuclides

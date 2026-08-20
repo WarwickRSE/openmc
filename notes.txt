@@ -23,3 +23,362 @@ or at runtime with:
 
 For a small water-block example, it is unlikely to help much; the default
 history-based mode is the straightforward choice.
+
+----------------------------------------------------------------
+
+Updated todo list
+
+I’ll trace the collision dispatch from the transport loop to the physics routines so I can point to the specific code that samples and applies scattering.
+
+Search complete: Locate scattering physics
+
+Searched for files matching `**/collision*.{h,hpp,cpp}`, 3 matches
+
+Searched for files matching `**/transport*.{h,hpp,cpp}`, no matches
+
+Searched for regex `particle.*collision|collision.*transport`, 37 results
+
+Searched for regex `neutron.*scattering|elastic.*scattering|inelastic.*scattering`, 245 results
+
+Searched for files matching `**/nuclear*reaction*.{h,hpp,cpp}`, no matches
+
+No matches found. Your search pattern might be excluded completely by either the search.exclude settings or .*ignore files.
+If you believe that it should have results, you can check into the .*ignore files and the exclude setting (here are some excluded patterns for reference:[**/node_modules,**/bower_components,**/*.code-search]).
+Then if you want to include those files you can call the tool again by setting "includeIgnoredFiles" to true.
+
+Searched for files matching `**/neutron*.{h,hpp,cpp}`, no matches
+
+Searched for regex `sample.*scattering|scattering.*sample`, 26 results
+
+Searched for files matching `**/physics_mg.{h,cpp}`, 3 matches
+
+Searched for regex `scattering event|sample scattering|scattering sample`, 19 results
+
+Searched for text `elastic scattering`, 202 results
+
+Searched for text `inelastic scattering`, 58 results
+
+Searched for files matching `**/scattdata*.{h,cpp}`, 3 matches
+
+Searched for files matching `**/secondary_thermal*.{h,cpp}`, 3 matches
+
+Searched for files matching `**/angle_energy*.{h,cpp}`, 2 matches
+
+Searched for text `collision` (`**/physics*.{h,cpp}`), 30 results
+
+Searched for files matching `**/collision*.{h,hpp,cpp}`, 3 matches
+
+Searched for text `collision physics`, 4 results
+
+Read 
+
+Read , lines 60 to 160
+
+Read , lines 690 to 775
+
+Read , lines 330 to 420
+
+Read , lines 1 to 200
+
+Read 
+
+For your continuous-energy water/deuterium model, scattering is performed in `physics.cpp`, beginning in `scatter(Particle&)`.
+
+The transport loop reaches a collision, then `scatter`:
+
+1. Samples whether the interaction is elastic, thermal $S(\alpha,\beta)$, or inelastic from the microscopic cross sections.
+2. Calls:
+   - `elastic_scatter(...)` for ordinary elastic scattering
+   - `sab_scatter(...)` for thermal scattering
+   - `inelastic_scatter(...)` for inelastic scattering
+3. Updates the particle’s outgoing energy and direction.
+
+The actual elastic collision kinematics begin in `elastic_scatter` in the same file. For your water block at a $14\,\mathrm{MeV}$ source energy, early interactions will generally follow this ordinary elastic-scattering path; thermal scattering becomes relevant after moderation to low energies.
+
+
+
+--------------------------------------
+Updated todo list
+
+I’ll inspect `sample_neutron_reaction` and the scattering helper calls it makes to identify each place that writes the particle’s scattering cosine.
+
+Searched for regex `sample_neutron_reaction|p\.mu\(\)` (`**/src/physics.cpp`), 16 results
+
+Searched for regex `void sab_scatter|void inelastic_scatter|void elastic_scatter` (`**/src/physics.cpp`), 3 results
+
+Read , lines 630 to 875
+
+`sample_neutron_reaction` delegates the write to the selected scattering routine rather than assigning `p.mu()` itself. I’ll read the routine boundary and the inelastic helper to pinpoint all three paths.
+
+Searched for text `void sample_neutron_reaction` (`**/src/physics.cpp`), 1 result
+
+Read , lines 1150 to 1210
+
+Read , lines 120 to 205
+
+`sample_neutron_reaction` itself does not assign `p.mu()` directly. After selecting the nuclide and handling absorption, it calls `scatter(p, i_nuclide)` in `physics.cpp`.
+
+Within `scatter`, `p.mu()` is set by the chosen reaction path:
+
+- **Ordinary elastic scattering:** `elastic_scatter(...)` calculates the lab-frame cosine from pre- and post-collision velocities, then assigns `p.mu()`.
+- **Thermal $S(\alpha,\beta)$ scattering:** `sab_scatter(...)` passes `&p.mu()` to the thermal scattering data’s `sample(...)` method.
+- **Inelastic scattering:** `inelastic_scatter(...)` samples into local `mu`, transforms it from center-of-mass to lab coordinates when needed, then assigns `p.mu() = mu`.
+- **Isotropic-in-lab override:** at the end of `scatter`, it assigns `p.mu() = u_old.dot(p.u())` after generating a new isotropic direction.
+
+For regular elastic scattering, the controlling assignment is in `elastic_scatter`, immediately before it updates `p.u()`:
+
+```cpp
+p.mu() = p.u().dot(v_n) / vel;
+p.u() = v_n / vel;
+
+
+Created 2 todos
+
+----------------------------------------
+
+Updated todo list
+
+I’ll trace how source particle types are parsed and dispatched in this checkout, since switching the Python source alone only works if the transport and nuclear-data paths support protons.
+
+Searched for regex `Proton|proton` (`**/include/openmc/particle_type.h`), 4 results
+
+Searched for regex `sample_proton_reaction|is_proton|ParticleType::proton` (`**/src/**/*.cpp`), 2 results
+
+Searched for regex `particle.*proton|proton.*particle` (`**/openmc/**/*.py`), 2 results
+
+Searched for regex `sample_neutron_reaction|sample_photon_reaction` (`**/src/**/*.cpp`), 4 results
+
+This checkout already has a proton particle type and a new proton dispatch branch, but the Python-side source API may still reject it. I’ll read those two local boundaries to identify the complete set of changes.
+
+Searched for regex `ParticleType|particle.*check|check_value\('particle'|particle_type` (`**/openmc/source.py`), 14 results
+
+Searched for text `proton` (`**/src/*.cpp`), 8 results
+
+Read , lines 35 to 120
+
+Read , lines 80 to 135
+
+There is also an immediate correctness issue in the new dispatch: the proton `case` falls through to `default` because it lacks `break`. I’ll verify whether protons are registered as transportable before recommending a source-only switch.
+
+Searched for regex `transport_index\(` (`**/include/openmc/particle_type.h`), 6 results
+
+Read , lines 1 to 85
+
+Read , lines 140 to 235
+
+Read , lines 190 to 229
+
+Read , lines 145 to 185
+
+To change the **source** in your model, edit the `openmc.IndependentSource(...)` definition in `water_block.py`:
+
+```python
+source = openmc.IndependentSource(
+    particle='proton',
+    space=openmc.stats.Point((0.1, 0.0, 0.0)),
+    angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
+)
+```
+
+However, that is not enough for a working proton-transport simulation. In this checkout, `ParticleType` recognizes `"proton"`, but `particle_type.h` only treats neutrons, photons, electrons, and positrons as transportable. `proton()` currently returns `C_NONE` from `transport_index()`.
+
+The places to extend are:
+
+- `particle_type.h`: add a proton transport index.
+- Particle-state/settings/tally arrays indexed by transport type: resize/register the new index.
+- `physics.cpp`: implement proton collision physics, stopping power, and energy loss. Your `sample_proton_reaction` is the starting dispatch hook, but it currently does not sample a proton reaction.
+- Cross-section/data loading: standard OpenMC neutron ACE/HDF5 data does not provide charged-particle transport data.
+
+Also add a `break;` after `sample_proton_reaction(p);` in the collision `switch`; it presently falls through to `default` and raises “Unsupported particle PDG”.
+
+Created 5 todos
+
+
+Updated todo list
+
+SUGGESTION TO IMPLEMENT MODEL
+
+Start at the collision dispatch in `physics.cpp`. Your `sample_proton_reaction(Particle&)` function is the natural entry point for your transport model.
+
+A sensible minimal sequence is:
+
+1. Make protons transportable in `particle_type.h` by giving `PDG_PROTON` a transport index.
+2. Add the missing `break;` after `sample_proton_reaction(p);` in `collision`.
+3. In `sample_proton_reaction`, calculate the macroscopic interaction/stopping quantities for the current material and proton energy.
+4. Sample a free path, advance `p.r()` along `p.u()`, reduce `p.E()`, and apply your angular perturbation with `rotate_angle`.
+5. Set `p.event()`, `p.event_mt()`, and `p.mu()` so tracking and tallies record a coherent collision event.
+6. Add the proton’s cutoff, particle-bank handling, and output/tally support anywhere the existing code indexes data by `transport_index()`.
+
+For a first vertical slice, implement a homogeneous-material proton model with continuous energy loss and your angular-scattering model in `sample_proton_reaction`. Once that runs end-to-end, move the flight distance and boundary handling into the normal transport loop so protons use the same geometry machinery as other particles.
+
+
+
+
+Updated todo list
+
+That error occurs during source initialization, before the collision dispatch. I’ll locate the source-type validation and the transport-type registration it relies on, then identify the minimal matching changes.
+
+Searched for regex `Unsupported source particle type|source particle type` (`**/src/**/*.cpp`), 1 result
+
+No matches found. Your search pattern might be excluded completely by either the search.exclude settings or .*ignore files.
+If you believe that it should have results, you can check into the .*ignore files and the exclude setting (here are some excluded patterns for reference:[**/node_modules,**/bower_components,**/*.code-search]).
+Then if you want to include those files you can call the tool again by setting "includeIgnoredFiles" to true.
+
+Searched for regex `transport_index\(\)|is_transportable` (`**/src/**/*.cpp`), 27 results
+
+Read , lines 150 to 180
+
+You have already made protons transportable at the `ParticleType` level by assigning index `4`. The remaining rejection is a separate source whitelist, so I’ll inspect that branch and the transport-particle array size before suggesting the next edit.
+
+Searched for regex `C_NONE|C_NEUTRON|C_PHOTON|C_ELECTRON|C_POSITRON` (`**/include/openmc/constants.h`), 2 results
+
+Searched for regex `array<.*4|\[4\]|C_NONE` (`**/include/openmc/settings.h`), 4 results
+
+Read , lines 25 to 65
+
+Read , lines 405 to 440
+
+The source validation in `source.cpp` only checks:
+
+```cpp
+type.is_transportable()
+```
+
+Since you already added `PDG_PROTON -> 4` in `ParticleType::transport_index()`, no additional source whitelist change is needed.
+
+The fact that you still see this exact error means the executable being run was built before that header change. Rebuild OpenMC, and make sure `water_block.py` runs that rebuilt executable, for example:
+
+```bash
+cmake --build build-debug -j
+```
+
+Then either put `bin` first in `PATH` or pass it explicitly:
+
+```python
+openmc.run(openmc_exec='build-debug/bin/openmc')
+```
+
+After rebuilding, the next issue will likely be that several arrays are still sized for four transportable particle types, e.g. `settings::energy_cutoff` and `settings::time_cutoff` in `settings.h`. Those must be expanded and initialized for proton index `4`, along with `data::energy_max`, before the new source can be transported.
+
+Created 3 todosa
+
+--------------------------------------------------
+
+Updated todo list
+
+I’ll trace the flight-distance calculation and particle dispatch before `collision()`, because a new transport type can bypass collision selection even when the source and collision switch are valid.
+
+Search complete: Trace proton collision path
+
+Searched for files matching `**/continuous*energy*.{py,cc,cpp,h,hpp,cc,c}`, no matches
+
+No matches found. Your search pattern might be excluded completely by either the search.exclude settings or .*ignore files.
+If you believe that it should have results, you can check into the .*ignore files and the exclude setting (here are some excluded patterns for reference:[**/node_modules,**/bower_components,**/*.code-search]).
+Then if you want to include those files you can call the tool again by setting "includeIgnoredFiles" to true.
+
+Searched for regex `continuous.*energy.*transport|continuous_energy.*transport`, 6 results
+
+Searched for files matching `**/Particle.{h,hpp,cc,cpp,c}`, 3 matches
+
+Searched for regex `PDG.*2212|proton|transport_index|particle.*type.*switch`, 104 results
+
+Searched for files matching `**/history*.{h,hpp,cc,cpp,c}`, no matches
+
+Searched for regex `new.*proton|proton.*transport|add_particle.*proton`, 11 results
+
+Searched for files matching `**/source*.{h,hpp,cc,cpp,c}`, 8 matches
+
+Searched for files matching `**/physics.cpp`, 1 match
+
+No matches found. Your search pattern might be excluded completely by either the search.exclude settings or .*ignore files.
+If you believe that it should have results, you can check into the .*ignore files and the exclude setting (here are some excluded patterns for reference:[**/node_modules,**/bower_components,**/*.code-search]).
+Then if you want to include those files you can call the tool again by setting "includeIgnoredFiles" to true.
+
+Searched for files matching `**/particle_type.h`, 2 matches
+
+Searched for regex `transport_index\(\)` (`**/*.h`), 8 results
+
+Searched for regex `sample_proton_reaction\(Particle&\)`, 1 result
+
+Searched for text `PDG_PROTON = 2212`, 2 results
+
+Searched for files matching `**/settings.h`, 2 matches
+
+Searched for regex `energy_cutoff|time_cutoff|data::energy_max`, 60 results
+
+Read , lines 1 to 400
+
+Read 
+
+Read 
+
+Read 
+
+Read , lines 160 to 247
+
+Read , lines 160 to 260
+
+Read , lines 260 to 360
+
+Read , lines 420 to 520
+
+The collision handler is present, so the remaining gate is likely the event selection in `Particle::event_advance`: it must have a nonzero total macroscopic cross section to schedule a collision. I’ll inspect that path and the proton cross-section slot.
+
+Searched for regex `event_advance|distance_collision|macro_xs|total` (`**/src/particle.cpp`), 14 results
+
+Searched for regex `calculate_xs|macro_xs\(\)|p\.macro_xs` (`**/src/**/*.cpp`), 122 results
+
+Searched for regex `class MacroXS|struct MacroXS|MacroXS` (`**/include/openmc/**/*.h`), 10 results
+
+Read , lines 250 to 390
+
+The gate is confirmed: a particle only reaches collision when `macro_xs().total > 0`; otherwise OpenMC assigns an infinite collision distance and it exits your vacuum-bounded block. I’ll read the cross-section dispatch to show the one condition you need to extend for protons.
+
+Read , lines 185 to 270
+
+Read , lines 805 to 915
+
+Read , lines 195 to 225
+
+Read , lines 840 to 885
+
+Yes. The missing step is in `material.cpp`, not the transport loop.
+
+`Particle::event_calculate_xs()` calls `Material::calculate_xs(p)`. That function only populates `p.macro_xs().total` for neutrons and photons:
+
+```cpp
+if (p.type().is_neutron()) {
+  this->calculate_neutron_xs(p);
+} else if (p.type().is_photon()) {
+  this->calculate_photon_xs(p);
+}
+```
+
+For a proton, `total` remains zero. Then `particle.cpp` sets:
+
+```cpp
+collision_distance() = INFINITY;
+```
+
+so it travels to the vacuum boundary and never invokes `collision()`.
+
+Add a proton branch that populates a nonzero macroscopic interaction coefficient from your model:
+
+```cpp
+} else if (p.type() == ParticleType::proton()) {
+  this->calculate_proton_xs(p);
+}
+```
+
+Implement `Material::calculate_proton_xs(Particle&)` alongside `calculate_neutron_xs` in `material.cpp`. At minimum, it must set:
+
+```cpp
+p.macro_xs().total = sigma_total_proton_cm_inverse;
+p.macro_xs().absorption = 0.0;
+p.macro_xs().fission = 0.0;
+p.macro_xs().nu_fission = 0.0;
+```
+
+Then `event_advance()` samples the distance to the next interaction as $-\ln(\xi)/\Sigma_t$, and `sample_proton_reaction()` will be reached.
+
+Created 5 todos

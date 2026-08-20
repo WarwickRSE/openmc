@@ -30,8 +30,8 @@ namespace openmc {
 //==============================================================================
 
 namespace data {
-array<double, 4> energy_min {0.0, 0.0, 0.0, 0.0};
-array<double, 4> energy_max {INFTY, INFTY, INFTY, INFTY};
+array<double, 5> energy_min {0.0, 0.0, 0.0, 0.0, 0.0};
+array<double, 5> energy_max {INFTY, INFTY, INFTY, INFTY, INFTY};
 double temperature_min {INFTY};
 double temperature_max {0.0};
 std::unordered_map<std::string, int> nuclide_map;

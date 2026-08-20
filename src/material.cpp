@@ -822,9 +822,19 @@ void Material::calculate_xs(Particle& p) const
     this->calculate_neutron_xs(p);
   } else if (p.type().is_photon()) {
     this->calculate_photon_xs(p);
+  } else if (p.type() == ParticleType::proton()) {
+  this->calculate_proton_xs(p);
   }
 }
+void Material::calculate_proton_xs(Particle& p) const
+{
+  // Testing - just a fixed xsection
+  p.macro_xs().total = 0.1;
+  //p.update_proton_xs(i_nuclide);
 
+  //Sum over nucleides etc
+
+}
 void Material::calculate_neutron_xs(Particle& p) const
 {
   // Find energy index on energy grid

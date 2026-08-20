@@ -742,8 +742,8 @@ void calculate_work(int64_t n_particles)
 void initialize_data()
 {
   // Determine minimum/maximum energy for incident neutron/photon data
-  data::energy_max = {INFTY, INFTY, INFTY, INFTY};
-  data::energy_min = {0.0, 0.0, 0.0, 0.0};
+  data::energy_max = {INFTY, INFTY, INFTY, INFTY, INFTY};
+  data::energy_min = {0.0, 0.0, 0.0, 0.0, 0.0};
 
   for (const auto& nuc : data::nuclides) {
     if (nuc->grid_.size() >= 1) {

@@ -167,6 +167,8 @@ constexpr int ParticleType::transport_index() const
     return 2;
   case PDG_POSITRON:
     return 3;
+  case PDG_PROTON:
+    return 4;
   default:
     return C_NONE;
   }

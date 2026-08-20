@@ -221,6 +221,7 @@ private:
   //! Normalize density
   void normalize_density();
 
+  void calculate_proton_xs(Particle& p) const;
   void calculate_neutron_xs(Particle& p) const;
   void calculate_photon_xs(Particle& p) const;
 

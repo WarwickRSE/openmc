@@ -931,6 +931,18 @@ void Particle::write_restart() const
   } // #pragma omp critical
 }
 
+void Particle::update_proton_xs(int i_nuclide)
+{
+  /* sugegsted outline from AI
+  auto& micro = proton_xs(i_nuclide);
+  if (E() != micro.last_E) {
+    micro.total = your_proton_model(i_nuclide, E());
+    micro.last_E = E();
+  }
+    */
+  
+}
+
 void Particle::update_neutron_xs(
   int i_nuclide, int i_grid, int i_sab, double sab_frac, double ncrystal_xs)
 {

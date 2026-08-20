@@ -60,6 +60,9 @@ void collision(Particle& p)
   case PDG_POSITRON:
     sample_positron_reaction(p);
     break;
+  case PDG_PROTON:
+    sample_proton_reaction(p);
+    break;
   default:
     fatal_error("Unsupported particle PDG for collision sampling.");
   }
@@ -100,6 +103,40 @@ void collision(Particle& p)
     }
     write_message(msg, 1);
   }
+}
+
+void sample_proton_reaction(Particle&p){
+  // This WILL eventually sample a proton reaction under the SDE model
+  // Very much a WIP
+
+  //Apply a small anglular tweak
+  // Sample a nuclide within the material
+  // Need to re-do that for protons
+  //int i_nuclide = sample_nuclide(p);
+  int i_nuclide = 1; //Always the H in test model
+
+  // Save which nuclide particle had collision with
+  p.event_nuclide() = i_nuclide;
+
+  //IGNORE potential for fission , and secondary emissions
+
+  //From neutron scatter:
+  /*
+  const auto& ncrystal_mat = model::materials[p.material()]->ncrystal_mat();
+  if (ncrystal_mat && p.E() < NCRYSTAL_MAX_ENERGY) {
+    ncrystal_mat.scatter(p);
+  } else {
+    scatter(p, i_nuclide);
+  }*/
+
+ constexpr double MAX_DEFLECTION = 1.0e-1; // radians
+
+  double mu = uniform_distribution(
+  std::cos(MAX_DEFLECTION), 1.0, p.current_seed());
+
+  p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
+  p.mu() = mu; 
+
 }
 
 void sample_neutron_reaction(Particle& p)

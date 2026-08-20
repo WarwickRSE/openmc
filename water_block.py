@@ -30,8 +30,10 @@ water_cell = openmc.Cell(fill=water, region=-domain)
 geometry = openmc.Geometry([water_cell])
 
 source = openmc.IndependentSource(
+    particle='proton',
     space=openmc.stats.Point((0.1, 0.0, 0.0)),
     angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
+    energy=openmc.stats.Discrete([1.0e6], [1.0])
 ) 
 
 universe = openmc.Universe(cells=[water_cell])
@@ -49,11 +51,11 @@ settings = openmc.Settings()
 
 settings.run_mode = 'fixed source'
 settings.source = source
-settings.batches = 100
+settings.batches = 1
 settings.inactive = 10
 settings.particles = 1000
 
-settings.track = [(1, 1, particle) for particle in range(1, 101)]
+settings.track = [(1, 1, particle) for particle in range(1, int(settings.particles/10))]
 
 settings.export_to_xml()
 
