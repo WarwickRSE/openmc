@@ -129,11 +129,10 @@ void sample_proton_reaction(Particle&p){
     scatter(p, i_nuclide);
   }*/
 
- constexpr double MAX_DEFLECTION = 1.0e-1; // radians
+ constexpr double MAX_DEFLECTION = 1.0e-3; // radians
 
   double mu = uniform_distribution(
   std::cos(MAX_DEFLECTION), 1.0, p.current_seed());
-
   p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
   p.mu() = mu; 
 

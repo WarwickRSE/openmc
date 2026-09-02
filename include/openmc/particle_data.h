@@ -498,6 +498,7 @@ private:
   // Data members -- see public: below for descriptions
 
   vector<NuclideMicroXS> neutron_xs_;
+  vector<NuclideMicroXS> proton_xs_;
   vector<ElementMicroXS> photon_xs_;
   MacroXS macro_xs_;
   CacheDataMG mg_xs_cache_;
@@ -592,6 +593,11 @@ public:
     return neutron_xs_[i];
   } // Microscopic neutron cross sections
   const NuclideMicroXS& neutron_xs(int i) const { return neutron_xs_[i]; }
+  NuclideMicroXS& proton_xs(int i)
+  {
+    return proton_xs_[i];
+  } // Microscopic proton cross sections
+  const NuclideMicroXS& proton_xs(int i) const { return proton_xs_[i]; }
 
   // Microscopic photon cross sections
   ElementMicroXS& photon_xs(int i) { return photon_xs_[i]; }

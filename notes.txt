@@ -382,3 +382,82 @@ p.macro_xs().nu_fission = 0.0;
 Then `event_advance()` samples the distance to the next interaction as $-\ln(\xi)/\Sigma_t$, and `sample_proton_reaction()` will be reached.
 
 Created 5 todos
+
+
+
+Updated todo list
+
+No. `macro_xs().total` is the material’s total interaction rate per unit path length, $\Sigma_t$ in $\mathrm{cm}^{-1}$.
+
+It determines the sampled distance to the next collision:
+
+$$d = -\frac{\ln(\xi)}{\Sigma_t}$$
+
+It does **not** describe energy loss.
+
+For your proton model, energy loss should be a separate stopping-power quantity, commonly:
+
+$$S(E) = -\frac{dE}{dx} \quad [\mathrm{eV/cm}]$$
+
+At each transport step of length $d$, apply:
+
+$$E_{\mathrm{new}} = \max(0, E_{\mathrm{old}} - S(E_{\mathrm{old}})d)$$
+
+You can use `macro_xs().total` to schedule discrete scattering/nuclear events, while handling continuous ionization loss separately during the particle advance.
+
+
+----------------------------------------------------
+Updated todo list
+
+Yes. The tally system is a better fit than a global counter if you want results by cell or mesh; I’ll locate the score dispatch so I can point to the smallest extension point for a proton stopping-power score.
+
+No matches found. Your search pattern might be excluded completely by either the search.exclude settings or .*ignore files.
+If you believe that it should have results, you can check into the .*ignore files and the exclude setting (here are some excluded patterns for reference:[**/node_modules,**/bower_components,**/*.code-search]).
+Then if you want to include those files you can call the tool again by setting "includeIgnoredFiles" to true.
+
+Searched for regex `HEATING|Heating|heating` (`**/src/tallies/**/*.cpp`), 29 results
+
+Searched for text `score_tracklength_tally` (`**/src/tallies/**/*.cpp`), 4 results
+
+Searched for regex `enum class TallyScore|enum.*TallyScore` (`**/include/openmc/**/*.h`), 2 results
+
+The existing infrastructure already has `HEATING`, including tracklength scoring, but it is tied to neutron kerma and photon/electron physics. I’ll inspect the score validation and scoring function to outline a proton-specific score without corrupting the existing meaning of `heating`.
+
+Read , lines 295 to 330
+
+Read , lines 240 to 375
+
+Read , lines 1030 to 1080
+
+Read , lines 625 to 665
+
+Yes, reuse the tally infrastructure, but do not use it unchanged.
+
+Existing `HEATING` handling in `tally_scoring.cpp` already has a generic charged-particle branch:
+
+```cpp
+double score = E + Q - p.E() - p.bank_second_E();
+```
+
+For a proton, this becomes approximately:
+
+$$E_{\rm deposited} = E_{\rm before} - E_{\rm after}$$
+
+However, it is designed around collision energy balance. Your proton stopping loss occurs along a flight segment, so reusing `HEATING` directly risks incorrect spatial scores when a segment crosses several mesh bins.
+
+The better design is:
+
+1. Reuse OpenMC’s tally/filter/result/reduction infrastructure.
+2. Add a new score, e.g. `PROTON_HEATING`, in `constants.h`.
+3. Add `"proton-heating"` to Python score parsing in `tallies.py` and the C API mapping in `tally.py`.
+4. In `score_tracklength_tally_general` in `tally_scoring.cpp`, score the **energy deposited in each subsegment**:
+   ```cpp
+   deposited = stopping_power * subsegment_distance * p.wgt();
+   ```
+   Here `subsegment_distance` is the portion of the track in the current cell/mesh bin, which makes mesh deposition correct.
+5. Restrict the score to `ParticleType::proton()`.
+
+That gives you built-in mesh/cell filtering, batch statistics, statepoint output, MPI reduction, and Python post-processing, while keeping proton stopping loss physically distinct from neutron kerma-based `heating`.
+
+Created 5 todos
+

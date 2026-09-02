@@ -828,11 +828,37 @@ void Material::calculate_xs(Particle& p) const
 }
 void Material::calculate_proton_xs(Particle& p) const
 {
-  // Testing - just a fixed xsection
-  p.macro_xs().total = 0.1;
-  //p.update_proton_xs(i_nuclide);
+  // ------- Duplicated from Neutrons w. adjustments
 
-  //Sum over nucleides etc
+  // Find energy index on energy grid
+  int proton = ParticleType::proton().transport_index();
+ 
+  int i_grid =
+    std::log(p.E() / data::energy_min[proton]) / simulation::log_spacing;
+
+  // Add contribution from each nuclide in material
+  for (int i = 0; i < nuclide_.size(); ++i) {
+    // ======================================================================
+    // CALCULATE MICROSCOPIC CROSS SECTION
+
+    // Get nuclide index
+    int i_nuclide = nuclide_[i];
+
+    // Update microscopic cross section for this nuclide
+    p.update_proton_xs(i_nuclide, i_grid);
+    auto& micro = p.proton_xs(i_nuclide);
+
+   //Sum over nucleides etc
+    // Copy atom density of nuclide in material
+    double atom_density = this->atom_density(i, p.density_mult());
+
+    // Add contributions to cross sections
+    p.macro_xs().total += atom_density * micro.total;
+    p.macro_xs().absorption += atom_density * micro.absorption;
+    //Fission not in use...
+    //p.macro_xs().fission += atom_density * micro.fission;
+    //p.macro_xs().nu_fission += atom_density * micro.nu_fission;
+  }
 
 }
 void Material::calculate_neutron_xs(Particle& p) const

@@ -21,6 +21,7 @@
 #include "openmc/nuclide.h"
 #include "openmc/particle_data.h"
 #include "openmc/photon.h"
+#include "openmc/protons.h"
 #include "openmc/physics.h"
 #include "openmc/physics_mg.h"
 #include "openmc/random_lcg.h"
@@ -240,6 +241,8 @@ void Particle::event_calculate_xs()
 
   // Calculate microscopic and macroscopic cross sections
   if (material() != MATERIAL_VOID) {
+    // TODO - check this out - our stuff is not angle dependent I don't think
+    // so we just plug in on calculate_xs
     if (settings::run_CE) {
       if (material() != material_last() || sqrtkT() != sqrtkT_last() ||
           density_mult() != density_mult_last()) {
@@ -279,6 +282,7 @@ void Particle::event_advance()
   } else {
     collision_distance() = -std::log(prn(current_seed())) / macro_xs().total;
   }
+  // That line will calculate time to next collision, IF we set total correctly
 
   double speed = this->speed();
   double time_cutoff = settings::time_cutoff[type().transport_index()];
@@ -289,8 +293,20 @@ void Particle::event_advance()
   double distance =
     std::min({boundary().distance(), collision_distance(), distance_cutoff});
 
+  // THIS iS WHERE we know exactly how far to go. So now we need to know the energy loss
+  // to slow the particle down
+
+
   // Advance particle in space and time
   this->move_distance(distance);
+  
+  double E_before = E();
+  double energyLossPer = 0;
+  if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
+    double energyLossPer = 10000.0; //Calculate it properly now
+    E() = std::max(0.0, E() - energyLossPer * distance);
+  }
+
   double dt = distance / speed;
   this->time() += dt;
   this->lifetime() += dt;
@@ -931,15 +947,18 @@ void Particle::write_restart() const
   } // #pragma omp critical
 }
 
-void Particle::update_proton_xs(int i_nuclide)
+// TODO - does this caching make sense or should we just recalculate regardless?
+void Particle::update_proton_xs(int i_nuclide, int i_grid)
 {
-  /* sugegsted outline from AI
+  
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {
-    micro.total = your_proton_model(i_nuclide, E());
+    //micro.total = your_proton_model(i_nuclide, E());
+    micro.total = mock_x_section();
+    micro.absorption = 0.0; // What should this be?
     micro.last_E = E();
   }
-    */
+  
   
 }
 
