@@ -118,7 +118,7 @@ public:
   //
   //! \param[in] i_nuclide Index in data::nuclides
   //! \param[in] i_grid Index on log union grid
-  void update_proton_xs(int i_nuclide, int i_grid);
+  void update_proton_xs(int i_nuclide, int i_grid, double MEE_material);
 
   //! Update microscopic cross section cache
   //

@@ -303,7 +303,7 @@ void Particle::event_advance()
   double E_before = E();
   double energyLossPer = 0;
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
-    double energyLossPer = 10000.0; //Calculate it properly now
+    double energyLossPer = this->macro_xs().absorption;
     E() = std::max(0.0, E() - energyLossPer * distance);
   }
 
@@ -948,13 +948,12 @@ void Particle::write_restart() const
 }
 
 // TODO - does this caching make sense or should we just recalculate regardless?
-void Particle::update_proton_xs(int i_nuclide, int i_grid)
+void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
 {
   
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {
-    //micro.total = your_proton_model(i_nuclide, E());
-    micro.total = mock_x_section();
+    micro.total = proton_bethe_bloch(i_nuclide, E(), MEE_material);
     micro.absorption = 0.0; // What should this be?
     micro.last_E = E();
   }

@@ -844,8 +844,11 @@ void Material::calculate_proton_xs(Particle& p) const
     // Get nuclide index
     int i_nuclide = nuclide_[i];
 
+    // TODO - use correct value!!!
+    double MEE_material = 70.0/1e6;
     // Update microscopic cross section for this nuclide
-    p.update_proton_xs(i_nuclide, i_grid);
+    //Mean Excitation Energy enters non-linearly into the equation
+    p.update_proton_xs(i_nuclide, i_grid, MEE_material);
     auto& micro = p.proton_xs(i_nuclide);
 
    //Sum over nucleides etc
