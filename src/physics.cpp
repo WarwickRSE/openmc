@@ -34,6 +34,8 @@
 #include <algorithm> // for max, min, max_element
 #include <cmath>     // for sqrt, exp, log, abs, copysign
 
+#include "openmc/protons.h"
+
 namespace openmc {
 
 //==============================================================================
@@ -90,7 +92,7 @@ void collision(Particle& p)
     std::string msg;
     if (p.event() == TallyEvent::KILL) {
       msg = fmt::format("    Killed. Energy = {} eV.", p.E());
-    } else if (p.type().is_neutron()) {
+    } else if (p.type().is_neutron() || p.type().is_proton()) {
       msg = fmt::format("    {} with {}. Energy = {} eV.",
         reaction_name(p.event_mt()), data::nuclides[p.event_nuclide()]->name_,
         p.E());
@@ -108,31 +110,25 @@ void collision(Particle& p)
 void sample_proton_reaction(Particle&p){
   // This WILL eventually sample a proton reaction under the SDE model
   // Very much a WIP
+  // EFFECTS needed overall:
+  // Small angle scattering (HERE)
+  // Energy loss (applied in event_advance)
+  // LARGE angle scattering (probably event advance OR diceroll choice here)
 
-  //Apply a small anglular tweak
-  // Sample a nuclide within the material
-  // Need to re-do that for protons
-  //int i_nuclide = sample_nuclide(p);
-  int i_nuclide = 1; //Always the H in test model
+  // TODO IMPORTANT - are we calculating the rates for every nuclide and then only using one??
 
+
+  // Sample a nuclide within the material (uses proton x-section internally)
+  int i_nuclide = sample_nuclide(p);
   // Save which nuclide particle had collision with
   p.event_nuclide() = i_nuclide;
 
   //IGNORE potential for fission , and secondary emissions
 
+  //Neutrons effects are in several functions, scatter etc. Just do this here for now
   //From neutron scatter:
-  /*
-  const auto& ncrystal_mat = model::materials[p.material()]->ncrystal_mat();
-  if (ncrystal_mat && p.E() < NCRYSTAL_MAX_ENERGY) {
-    ncrystal_mat.scatter(p);
-  } else {
-    scatter(p, i_nuclide);
-  }*/
 
- constexpr double MAX_DEFLECTION = 1.0e-3; // radians
-
-  double mu = uniform_distribution(
-  std::cos(MAX_DEFLECTION), 1.0, p.current_seed());
+  auto mu = random_angle();
   p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
   p.mu() = mu; 
 
@@ -554,7 +550,12 @@ int sample_nuclide(Particle& p)
     double atom_density = mat->atom_density(i, p.density_mult());
 
     // Increment probability to compare to cutoff
-    prob += atom_density * p.neutron_xs(i_nuclide).total;
+    if(p.type().is_proton()){
+      // Special case for SDE model
+      prob += atom_density * p.proton_xs(i_nuclide).total;
+    }else{
+      prob += atom_density * p.neutron_xs(i_nuclide).total;
+    }
     if (prob >= cutoff)
       return i_nuclide;
   }

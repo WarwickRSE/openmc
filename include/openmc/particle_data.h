@@ -185,6 +185,29 @@ struct NuclideMicroXS {
   double ncrystal_xs {-1.0}; //!< NCrystal cross section
 };
 
+// TODO - use this for now as it stands out better. Is this the right approach?
+struct NuclideProtonMicroXS {
+  // Microscopic cross sections in barns
+  double total;      //!< total cross section
+  double absorption; //!< absorption (disappearance)
+  double loss_rate; //!< per-cm energy loss from single nuclide
+
+  double elastic; //!< Rate for elastic scattering
+  double inelastic; //!< Rate for inelastic
+  bool use_inelastic; //<! Whether next event should be inelastic or not
+
+/*  // Indicies and factors needed to compute cross sections from the data tables
+  int index_grid;       //!< Index on nuclide energy grid
+  int index_temp;       //!< Temperature index for nuclide
+  double interp_factor; //!< Interpolation factor on nuc. energy grid
+*/
+
+  // Energy and temperature last used to evaluate these cross sections.  If
+  // these values have changed, then the cross sections must be re-evaluated.
+  double last_E {0.0};       //!< Last evaluated energy
+};
+
+
 //==============================================================================
 //! Cached microscopic photon cross sections for a particular element at the
 //! current energy
@@ -212,6 +235,7 @@ struct MacroXS {
   double fission;     //!< macroscopic fission xs
   double nu_fission;  //!< macroscopic production xs
   double photon_prod; //!< macroscopic photon production xs
+  double loss_rate; //!< per-cm energy loss rate for applicable particles
 
   // Photon cross sections
   double coherent;        //!< macroscopic coherent xs
@@ -498,7 +522,7 @@ private:
   // Data members -- see public: below for descriptions
 
   vector<NuclideMicroXS> neutron_xs_;
-  vector<NuclideMicroXS> proton_xs_;
+  vector<NuclideProtonMicroXS> proton_xs_;
   vector<ElementMicroXS> photon_xs_;
   MacroXS macro_xs_;
   CacheDataMG mg_xs_cache_;
@@ -593,11 +617,11 @@ public:
     return neutron_xs_[i];
   } // Microscopic neutron cross sections
   const NuclideMicroXS& neutron_xs(int i) const { return neutron_xs_[i]; }
-  NuclideMicroXS& proton_xs(int i)
+  auto& proton_xs(int i)
   {
     return proton_xs_[i];
   } // Microscopic proton cross sections
-  const NuclideMicroXS& proton_xs(int i) const { return proton_xs_[i]; }
+  const auto& proton_xs(int i) const { return proton_xs_[i]; }
 
   // Microscopic photon cross sections
   ElementMicroXS& photon_xs(int i) { return photon_xs_[i]; }

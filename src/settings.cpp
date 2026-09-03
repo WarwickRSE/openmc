@@ -111,7 +111,7 @@ int64_t max_particles_in_flight {100000};
 int max_particle_events {1000000};
 
 ElectronTreatment electron_treatment {ElectronTreatment::TTB};
-array<double, 5> energy_cutoff {0.0, 1000.0, 0.0, 0.0, 0.0};
+array<double, 5> energy_cutoff {0.0, 1000.0, 0.0, 0.0, 0.05*1e6}; //TODO - add to settings.py
 array<double, 5> time_cutoff {INFTY, INFTY, INFTY, INFTY, INFTY};
 int ifp_n_generation {-1};
 IFPParameter ifp_parameter {IFPParameter::None};

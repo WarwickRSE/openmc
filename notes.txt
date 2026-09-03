@@ -461,3 +461,48 @@ That gives you built-in mesh/cell filtering, batch statistics, statepoint output
 
 Created 5 todos
 
+-------------------------------
+
+Updated todo list
+
+I’ll trace the `macro_xs` definition and where its total and absorption entries are populated or consumed, then summarize the distinction in OpenMC’s transport terms.
+
+Searched for text `macro_xs` (`**/*.{h,cpp,py}`), 191 results
+
+Searched for regex `struct MacroXS|class MacroXS|absorption` (`**/include/openmc/particle_data.h`), 10 results
+
+Read , lines 800 to 890
+
+Read , lines 520 to 565
+
+Read , lines 45 to 100
+
+The local path confirms `total` is the collision-sampling cross section, while `absorption` is checked separately before scattering. I’m checking the microscopic definitions and multigroup construction now, since “absorption” can include fission and other disappearance reactions depending on particle type.
+
+Searched for regex `macro_xs\(\)\.absorption|absorption =|absorption +=` (`**/src/material.cpp`), 3 results
+
+Searched for regex `double absorption|absorption;|absorption\(` (`**/include/openmc/**/*.h`), 16 results
+
+Read , lines 140 to 225
+
+Read , lines 590 to 630
+
+Read , lines 890 to 945
+
+For a neutron, `particle.macro_xs()` contains macroscopic cross sections in units of inverse length:
+
+- `total`: probability per unit path length of **any neutron collision**. It includes absorption plus scattering:
+  \[
+  \Sigma_t = \Sigma_a + \Sigma_s
+  \]
+- `absorption`: probability per unit path length that the neutron **disappears from the neutron population**, including capture and fission. It excludes scattering.
+
+Thus:
+
+```cpp
+p.macro_xs().total - p.macro_xs().absorption
+```
+
+is the effective scattering cross section used for non-absorbing collisions. `total` determines when and which nuclide a collision occurs; `absorption` determines whether the collision removes neutron weight or terminates the neutron.
+
+Created 2 todos

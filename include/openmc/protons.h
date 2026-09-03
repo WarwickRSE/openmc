@@ -8,21 +8,35 @@
 
 namespace openmc{
 static inline std::mt19937 proton_rng {std::random_device {}()};
+constexpr double MAX_DEFLECTION = 1.0e-3; // radians
+
 static inline std::uniform_real_distribution<double> uniform_dist {0.0, 1.0};
+static inline std::uniform_real_distribution<double> angle_dist {std::cos(MAX_DEFLECTION), 1.0};
 
-double mock_x_section(){
-    return 0.1/0.000668456; // A value which makes something happen
-}
 
-//TODO - move some of this into the Nuclide class?
+// IMPORTANT - THIS IS A WIP. A lot of this file is dumb static global state in order to test the MODEL needs before integrating to the codebase proper
+//TODO - move some of this into the Nuclide, Material or Particle classes?
 
-double mock_random_value(){
+inline double mock_random_value(){
     double sample = uniform_dist(proton_rng) * 0.1/0.000668456;
     return sample;
 }
 
+inline double random_angle(){
+  return angle_dist(proton_rng);
+}
 
-double proton_bethe_bloch(int i_nuclide, double E, double I){
+
+/** @brief Inelastic energy loss
+ * 
+ * Computes the inelastic energy loss per cm using bethe-bloch formula
+ * As CURRENTLY implemented this is for a single nuclide in a combined material - the averaged mean-excitation-energy is smuggled in as I and enters non-linearly
+ * 
+ * @param i_nuclide The index for this nuclide in the global table
+ * @param E Initial Energy of the proton
+ * @param I Mean activation energy for current material
+ */
+inline double proton_bethe_bloch(int i_nuclide, double E, double I){
 
     //Access the material base properties from the data table
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
@@ -31,8 +45,7 @@ double proton_bethe_bloch(int i_nuclide, double E, double I){
     double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
     double betasq = (2 * mpcsq + E) * E / pow(mpcsq + E, 2);
     
-    //TODO - density* mass_fraction == atom_density??
-    return 0.3072 * nuclide.Z_ *
+    return 0.3072 * nuclide.A_ * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
              (betasq * nuclide.A_); // MeV / cm
     

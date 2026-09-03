@@ -858,9 +858,8 @@ void Material::calculate_proton_xs(Particle& p) const
     // Add contributions to cross sections
     p.macro_xs().total += atom_density * micro.total;
     p.macro_xs().absorption += atom_density * micro.absorption;
-    //Fission not in use...
-    //p.macro_xs().fission += atom_density * micro.fission;
-    //p.macro_xs().nu_fission += atom_density * micro.nu_fission;
+    /// Converting from barn to cm...
+    p.macro_xs().loss_rate += atom_density * micro.loss_rate;
   }
 
 }

@@ -265,6 +265,7 @@ void Particle::event_calculate_xs()
     macro_xs().absorption = 0.0;
     macro_xs().fission = 0.0;
     macro_xs().nu_fission = 0.0;
+    macro_xs().loss_rate = 0.0;
   }
 }
 
@@ -303,10 +304,12 @@ void Particle::event_advance()
   double E_before = E();
   double energyLossPer = 0;
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
-    double energyLossPer = this->macro_xs().absorption;
+    double energyLossPer = this->macro_xs().loss_rate;
+    //TODO - check this is the right way to update the energy
     E() = std::max(0.0, E() - energyLossPer * distance);
   }
-
+  //std::cout<< E()<<" "<<energyLossPer*distance<<" "<<E_before<<std::endl;
+ 
   double dt = distance / speed;
   this->time() += dt;
   this->lifetime() += dt;
@@ -953,11 +956,11 @@ void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
   
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {
-    micro.total = proton_bethe_bloch(i_nuclide, E(), MEE_material);
+    micro.total = mock_random_value();
     micro.absorption = 0.0; // What should this be?
     micro.last_E = E();
+    micro.loss_rate = 10000.0*proton_bethe_bloch(i_nuclide, E(), MEE_material);
   }
-  
   
 }
 

@@ -83,11 +83,14 @@ public:
     return pdg_number_ >= 1000000000;
   }
 
-  // Get transport index (0-3 for transportable particles, C_NONE otherwise)
+  // Get transport index (0-4 for transportable particles, C_NONE otherwise)
   constexpr int transport_index() const;
 
   // Check if this is a neutron
   constexpr bool is_neutron() const { return pdg_number_ == PDG_NEUTRON; }
+
+  // Check if this is a neutron
+  constexpr bool is_proton() const { return pdg_number_ == PDG_PROTON; }
 
   // Check if this is a photon
   constexpr bool is_photon() const { return pdg_number_ == PDG_PHOTON; }
