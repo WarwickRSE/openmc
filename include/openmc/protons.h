@@ -8,7 +8,7 @@
 
 namespace openmc{
 static inline std::mt19937 proton_rng {std::random_device {}()};
-constexpr double MAX_DEFLECTION = 1.0e-3; // radians
+constexpr double MAX_DEFLECTION = 1.0e-10; // radians
 
 static inline std::uniform_real_distribution<double> uniform_dist {0.0, 1.0};
 static inline std::uniform_real_distribution<double> angle_dist {std::cos(MAX_DEFLECTION), 1.0};

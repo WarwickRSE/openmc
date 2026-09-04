@@ -19,10 +19,12 @@ water.temperature = 300 # K
 materials.append(water)
 materials.export_to_xml()
 
+xlen = 50.0
+
 # Create geometry
 xmin = openmc.XPlane(x0=0.0, boundary_type='vacuum')
 xvoid = openmc.XPlane(x0=1.0)
-xmax = openmc.XPlane(x0=60.0, boundary_type='vacuum')
+xmax = openmc.XPlane(x0=xlen, boundary_type='vacuum')
 ymin = openmc.YPlane(y0=-1.0, boundary_type='vacuum')
 ymax = openmc.YPlane(y0=1.0, boundary_type='vacuum')
 zmin = openmc.ZPlane(z0=-1.0, boundary_type='vacuum')
@@ -40,7 +42,7 @@ source = openmc.IndependentSource(
     particle='proton',
     space=openmc.stats.Point((0.1, 0.0, 0.0)),
     angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
-    energy=openmc.stats.Discrete([80.0e3], [1.0])
+    energy=openmc.stats.Discrete([250.0e3], [1.0])
 ) 
 
 universe = openmc.Universe(cells=[void_cell, water_cell])
@@ -68,8 +70,8 @@ settings.track = [(1, 1, particle) for particle in range(1, int(settings.particl
 
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)
-mesh.upper_right = (60.0, 1.0, 1.0)
-mesh.dimension = (600, 40, 40)
+mesh.upper_right = (xlen, 1.0, 1.0)
+mesh.dimension = (500, 40, 40)
 
 heating = openmc.Tally(name="proton heating")
 heating.filters = [openmc.MeshFilter(mesh)]
@@ -126,7 +128,7 @@ fig, ax = plt.subplots(figsize=(12, 4))
 image = ax.imshow(
     heatmap.T,
     origin="lower",
-    extent=(0.0, 60.0, -1.0, 1.0),
+    extent=(0.0, xlen, -1.0, 1.0),
     aspect="auto",
     cmap="inferno",
 )
@@ -136,3 +138,19 @@ ax.set_ylabel("y [cm]")
 fig.colorbar(image, ax=ax, label="Heating [eV/source particle]")
 fig.tight_layout()
 fig.savefig("heating_xy.png", dpi=200)
+
+x_centers = np.linspace(0.0, xlen, mesh.dimension[0], endpoint=False)
+x_centers += 0.5 * (xlen / mesh.dimension[0])
+heating_lineout = heating_data.sum(axis=(1, 2))
+
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(x_centers, heating_lineout, color="black")
+ax.set_xlabel("x [cm]")
+ax.set_ylabel("Heating integrated over y,z [eV/source particle]")
+ax.set_title("Heating line-out summed over y and z")
+#ax.set_yscale("log")
+peak_heating = np.max(heating_lineout)
+#ax.set_ylim(peak_heating / 10.0, peak_heating)
+ax.grid(True, alpha=0.3)
+fig.tight_layout()
+fig.savefig("heating_lineout_x.png", dpi=200)

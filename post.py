@@ -61,3 +61,22 @@ ax.set_ylabel("y [cm]")
 fig.colorbar(image, ax=ax, label="Heating [eV/source particle]")
 fig.tight_layout()
 fig.savefig("heating_xy.png", dpi=200)
+
+
+
+
+x_centers = np.linspace(0.0, 60.0, mesh.dimension[0], endpoint=False)
+x_centers += 0.5 * (60.0 / mesh.dimension[0])
+heating_lineout = heating_data.sum(axis=(1, 2))
+
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(x_centers, heating_lineout, color="black")
+ax.set_xlabel("x [cm]")
+ax.set_ylabel("Heating integrated over y,z [eV/source particle]")
+ax.set_title("Heating line-out summed over y and z")
+#ax.set_yscale("log")
+peak_heating = np.max(heating_lineout)
+#ax.set_ylim(peak_heating / 10.0, peak_heating)
+ax.grid(True, alpha=0.3)
+fig.tight_layout()
+fig.savefig("heating_lineout_x.png", dpi=200)

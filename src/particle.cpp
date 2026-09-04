@@ -295,11 +295,11 @@ void Particle::event_advance()
   
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     // Additional distance caps: pure step len, and energy loss len
-    const double max_step_len = 0.5, min_step_len = 0.05; // TODO - are these cm??
+    const double max_step_len = 0.2, min_step_len = 0.05; // TODO - are these cm??
     const double max_energy_loss = 1000.0; // in eV/cm
     const double loss_len = std::max(max_energy_loss/this->macro_xs().loss_rate, min_step_len);
     distance = std::min({boundary().distance(), collision_distance(), distance_cutoff,max_step_len, loss_len});
-    std::cout<<"Dist "<<distance<<" "<<collision_distance()<<" "<<max_step_len<<" "<<loss_len<< std::endl;
+    //std::cout<<"Dist "<<distance<<" "<<collision_distance()<<" "<<max_step_len<<" "<<loss_len<< std::endl;
   }else{
     distance = std::min({boundary().distance(), collision_distance(), distance_cutoff});
   }
@@ -312,7 +312,7 @@ void Particle::event_advance()
   double E_before = E();
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     double energyLossPer = this->macro_xs().loss_rate;
-    std::cout<<energyLossPer<<" "<<E()<<std::endl;
+    //std::cout<<energyLossPer<<" "<<E()<<std::endl;
     E() = std::max(0.0, E() - energyLossPer * distance);
   }
  

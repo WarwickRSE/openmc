@@ -823,7 +823,8 @@ void Material::calculate_xs(Particle& p) const
   } else if (p.type().is_photon()) {
     this->calculate_photon_xs(p);
   } else if (p.type() == ParticleType::proton()) {
-  this->calculate_proton_xs(p);
+    p.macro_xs().loss_rate = 0.0;
+    this->calculate_proton_xs(p);
   }
 }
 void Material::calculate_proton_xs(Particle& p) const
