@@ -830,6 +830,7 @@ void Material::calculate_proton_xs(Particle& p) const
 {
   // ------- Duplicated from Neutrons w. adjustments
 
+  const double barn2Avo = 1.66054; // TODO CHECKKKKK!!!
   // Find energy index on energy grid
   int proton = ParticleType::proton().transport_index();
  
@@ -858,8 +859,8 @@ void Material::calculate_proton_xs(Particle& p) const
     // Add contributions to cross sections
     p.macro_xs().total += atom_density * micro.total;
     p.macro_xs().absorption += atom_density * micro.absorption;
-    /// Converting from barn to cm...
-    p.macro_xs().loss_rate += atom_density * micro.loss_rate;
+    // TODO Converting from barn to cm...
+    p.macro_xs().loss_rate += atom_density * barn2Avo * micro.loss_rate;
   }
 
 }

@@ -20,24 +20,30 @@ materials.append(water)
 materials.export_to_xml()
 
 # Create geometry
-domain = openmc.model.RectangularParallelepiped(
-    xmin=0.0, xmax=50.0,
-    ymin=-1.0, ymax=1.0,
-    zmin=-1.0, zmax=1.0,
-    boundary_type='vacuum',
-)
+xmin = openmc.XPlane(x0=0.0, boundary_type='vacuum')
+xvoid = openmc.XPlane(x0=1.0)
+xmax = openmc.XPlane(x0=60.0, boundary_type='vacuum')
+ymin = openmc.YPlane(y0=-1.0, boundary_type='vacuum')
+ymax = openmc.YPlane(y0=1.0, boundary_type='vacuum')
+zmin = openmc.ZPlane(z0=-1.0, boundary_type='vacuum')
+zmax = openmc.ZPlane(z0=1.0, boundary_type='vacuum')
 
-water_cell = openmc.Cell(fill=water, region=-domain)
-geometry = openmc.Geometry([water_cell])
+transverse_region = +ymin & -ymax & +zmin & -zmax
+void_cell = openmc.Cell(region=+xmin & -xvoid & transverse_region)
+water_cell = openmc.Cell(
+    fill=water,
+    region=+xvoid & -xmax & transverse_region,
+)
+geometry = openmc.Geometry([void_cell, water_cell])
 
 source = openmc.IndependentSource(
     particle='proton',
     space=openmc.stats.Point((0.1, 0.0, 0.0)),
     angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
-    energy=openmc.stats.Discrete([100.0e3], [1.0])
+    energy=openmc.stats.Discrete([80.0e3], [1.0])
 ) 
 
-universe = openmc.Universe(cells=[water_cell])
+universe = openmc.Universe(cells=[void_cell, water_cell])
 geometry.root_universe = universe
 
 geometry.export_to_xml()
@@ -62,8 +68,8 @@ settings.track = [(1, 1, particle) for particle in range(1, int(settings.particl
 
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)
-mesh.upper_right = (50.0, 1.0, 1.0)
-mesh.dimension = (500, 40, 40)
+mesh.upper_right = (60.0, 1.0, 1.0)
+mesh.dimension = (600, 40, 40)
 
 heating = openmc.Tally(name="proton heating")
 heating.filters = [openmc.MeshFilter(mesh)]
@@ -113,14 +119,14 @@ with openmc.StatePoint("statepoint.1.h5") as statepoint:
     heating_data = tally.get_reshaped_data(expand_dims=True).squeeze()
 
 z_index = mesh.dimension[2] // 2
-#heatmap = heating_data.sum(axis=2)
-heatmap = heating_data[:, :, z_index]
+heatmap = heating_data.sum(axis=2)
+#heatmap = heating_data[:, :, z_index]
 
 fig, ax = plt.subplots(figsize=(12, 4))
 image = ax.imshow(
     heatmap.T,
     origin="lower",
-    extent=(0.0, 50.0, -1.0, 1.0),
+    extent=(0.0, 60.0, -1.0, 1.0),
     aspect="auto",
     cmap="inferno",
 )

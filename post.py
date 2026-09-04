@@ -44,8 +44,8 @@ with openmc.StatePoint("statepoint.1.h5") as sp:
     heating_data = tally.get_reshaped_data(expand_dims=True).squeeze()
 
 z_index = mesh.dimension[2] // 2
-#heatmap = heating_data.sum(axis=2)
-heatmap = heating_data[:, :, z_index]
+heatmap = heating_data.sum(axis=2)
+#heatmap = heating_data[:, :, z_index]
 
 fig, ax = plt.subplots(figsize=(12, 4))
 image = ax.imshow(

@@ -242,9 +242,9 @@ void Particle::event_calculate_xs()
   // Calculate microscopic and macroscopic cross sections
   if (material() != MATERIAL_VOID) {
     // TODO - check this out - our stuff is not angle dependent I don't think
-    // so we just plug in on calculate_xs
+    // so we just plug in on calculate_xs. but we are energy dependent so do we need to redo always?
     if (settings::run_CE) {
-      if (material() != material_last() || sqrtkT() != sqrtkT_last() ||
+      if (this->type().is_proton() || material() != material_last() || sqrtkT() != sqrtkT_last() ||
           density_mult() != density_mult_last()) {
         // If the material is the same as the last material and the
         // temperature hasn't changed, we don't need to lookup cross
@@ -290,25 +290,31 @@ void Particle::event_advance()
   double distance_cutoff =
     (time_cutoff < INFTY) ? (time_cutoff - time()) * speed : INFTY;
 
-  // Select smaller of the three distances
-  double distance =
-    std::min({boundary().distance(), collision_distance(), distance_cutoff});
-
+ // Select smaller of the three distances
+  double distance;
+  
+  if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
+    // Additional distance caps: pure step len, and energy loss len
+    const double max_step_len = 0.5, min_step_len = 0.05; // TODO - are these cm??
+    const double max_energy_loss = 1000.0; // in eV/cm
+    const double loss_len = std::max(max_energy_loss/this->macro_xs().loss_rate, min_step_len);
+    distance = std::min({boundary().distance(), collision_distance(), distance_cutoff,max_step_len, loss_len});
+    std::cout<<"Dist "<<distance<<" "<<collision_distance()<<" "<<max_step_len<<" "<<loss_len<< std::endl;
+  }else{
+    distance = std::min({boundary().distance(), collision_distance(), distance_cutoff});
+  }
   // THIS iS WHERE we know exactly how far to go. So now we need to know the energy loss
   // to slow the particle down
-
 
   // Advance particle in space and time
   this->move_distance(distance);
   
   double E_before = E();
-  double energyLossPer = 0;
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     double energyLossPer = this->macro_xs().loss_rate;
-    //TODO - check this is the right way to update the energy
+    std::cout<<energyLossPer<<" "<<E()<<std::endl;
     E() = std::max(0.0, E() - energyLossPer * distance);
   }
-  //std::cout<< E()<<" "<<energyLossPer*distance<<" "<<E_before<<std::endl;
  
   double dt = distance / speed;
   this->time() += dt;
@@ -956,10 +962,15 @@ void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
   
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {
-    micro.total = mock_random_value();
     micro.absorption = 0.0; // What should this be?
     micro.last_E = E();
-    micro.loss_rate = 10000.0*proton_bethe_bloch(i_nuclide, E(), MEE_material);
+    micro.loss_rate = proton_bethe_bloch(i_nuclide, E(), MEE_material);
+    if(micro.loss_rate != micro.loss_rate){
+      throw std::runtime_error("Loss rate is NaN");
+    }
+    micro.elastic = rutherford_elastic_rate();
+    micro.inelastic = non_elastic_rate();
+    micro.total = micro.elastic + micro.inelastic;
   }
   
 }
