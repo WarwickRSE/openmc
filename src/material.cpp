@@ -824,6 +824,7 @@ void Material::calculate_xs(Particle& p) const
     this->calculate_photon_xs(p);
   } else if (p.type() == ParticleType::proton()) {
     p.macro_xs().loss_rate = 0.0;
+    p.macro_xs().energy_straggling = 0.0;
     this->calculate_proton_xs(p);
   }
 }
@@ -838,6 +839,7 @@ void Material::calculate_proton_xs(Particle& p) const
   int i_grid =
     std::log(p.E() / data::energy_min[proton]) / simulation::log_spacing;
 
+  double total_density = 0.0;
   // Add contribution from each nuclide in material
   for (int i = 0; i < nuclide_.size(); ++i) {
     // ======================================================================
@@ -862,7 +864,12 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().absorption += atom_density * micro.absorption;
     // TODO Converting from barn to cm...
     p.macro_xs().loss_rate += atom_density * barn2Avo * micro.loss_rate;
+
+    //Energy straggling cached part. 
+    p.macro_xs().energy_straggling += barn2Avo * atom_density * micro.energy_straggling;
+    //total_density += atom_density;
   }
+  //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit
 
 }
 void Material::calculate_neutron_xs(Particle& p) const

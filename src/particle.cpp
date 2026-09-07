@@ -314,8 +314,9 @@ void Particle::event_advance()
   double E_before = E();
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     double energyLossPer = this->macro_xs().loss_rate;
-    //std::cout<<energyLossPer<<" "<<E()<<std::endl;
-    E() = std::max(0.0, E() - energyLossPer * distance);
+    double energyStraggle = std::sqrt(this->macro_xs().energy_straggling * energy_straggling_update_sq(E()) * distance) * random_straggle();
+    std::cout<<energyLossPer<<" "<<E()<<" "<<energyStraggle<< std::endl;
+    E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
   }
  
   double dt = distance / speed;
@@ -967,9 +968,7 @@ void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
     micro.absorption = 0.0; // What should this be?
     micro.last_E = E();
     micro.loss_rate = proton_bethe_bloch(i_nuclide, E(), MEE_material);
-    if(micro.loss_rate != micro.loss_rate){
-      throw std::runtime_error("Loss rate is NaN");
-    }
+    micro.energy_straggling = energy_straggling_sd(i_nuclide);
     micro.elastic = rutherford_elastic_rate();
     micro.inelastic = non_elastic_rate();
     micro.total = micro.elastic + micro.inelastic;

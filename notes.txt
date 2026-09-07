@@ -557,3 +557,6 @@ enum class AdvanceEvent {
 Then have `event_advance()` return or store the event selected by the minimum distance. A `step_limit` should re-enter `event_calculate_xs()` and continue propagation without calling `collision()` or `event_cross_surface()`.
 
 The current implementation is therefore not valid for continuous-loss transport: `macro.total` is unintentionally coupled to the numerical stepping and event dispatch.
+
+
+

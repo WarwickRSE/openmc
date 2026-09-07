@@ -19,7 +19,7 @@ water.temperature = 300 # K
 materials.append(water)
 materials.export_to_xml()
 
-xlen = 50.0
+xlen = 20.0
 
 # Create geometry
 xmin = openmc.XPlane(x0=0.0, boundary_type='vacuum')
@@ -63,7 +63,7 @@ settings.source = source
 settings.batches = 1
 settings.inactive = 10
 settings.particles = 1000
-settings.verbosity = 10
+settings.verbosity = 7
 
 settings.track = [(1, 1, particle) for particle in range(1, int(settings.particles/10))]
 

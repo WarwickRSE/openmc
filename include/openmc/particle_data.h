@@ -191,6 +191,7 @@ struct NuclideProtonMicroXS {
   double total;      //!< total cross section
   double absorption; //!< absorption (disappearance)
   double loss_rate; //!< per-cm energy loss from single nuclide
+  double energy_straggling; //!per-cm ??? energy randomisation from single nuc
 
   double elastic; //!< Rate for elastic scattering
   double inelastic; //!< Rate for inelastic
@@ -236,6 +237,7 @@ struct MacroXS {
   double nu_fission;  //!< macroscopic production xs
   double photon_prod; //!< macroscopic photon production xs
   double loss_rate; //!< per-cm energy loss rate for applicable particles
+  double energy_straggling; //!per-cm ??? energy randomisation for applicable particles
 
   // Photon cross sections
   double coherent;        //!< macroscopic coherent xs
