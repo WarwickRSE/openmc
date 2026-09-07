@@ -132,6 +132,8 @@ void sample_proton_reaction(Particle&p){
   p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
   p.mu() = mu; 
 
+  p.event() = TallyEvent::SCATTER;
+
 }
 
 void sample_neutron_reaction(Particle& p)

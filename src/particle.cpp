@@ -296,11 +296,13 @@ void Particle::event_advance()
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     // Additional distance caps: pure step len, and energy loss len
     const double max_step_len = 0.2, min_step_len = 0.05; // TODO - are these cm??
-    const double max_energy_loss = 1000.0; // in eV/cm
+    const double max_energy_loss = 10000.0; // in eV/cm
     const double loss_len = std::max(max_energy_loss/this->macro_xs().loss_rate, min_step_len);
-    distance = std::min({boundary().distance(), collision_distance(), distance_cutoff,max_step_len, loss_len});
+    transport_distance() = std::min({collision_distance(), max_step_len, loss_len});
+    distance = std::min({boundary().distance(), transport_distance(), distance_cutoff});
     //std::cout<<"Dist "<<distance<<" "<<collision_distance()<<" "<<max_step_len<<" "<<loss_len<< std::endl;
   }else{
+    transport_distance() = collision_distance();
     distance = std::min({boundary().distance(), collision_distance(), distance_cutoff});
   }
   // THIS iS WHERE we know exactly how far to go. So now we need to know the energy loss

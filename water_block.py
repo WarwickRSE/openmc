@@ -42,7 +42,7 @@ source = openmc.IndependentSource(
     particle='proton',
     space=openmc.stats.Point((0.1, 0.0, 0.0)),
     angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
-    energy=openmc.stats.Discrete([250.0e3], [1.0])
+    energy=openmc.stats.Discrete([100.0e6], [1.0])
 ) 
 
 universe = openmc.Universe(cells=[void_cell, water_cell])

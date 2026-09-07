@@ -506,3 +506,54 @@ p.macro_xs().total - p.macro_xs().absorption
 is the effective scattering cross section used for non-absorbing collisions. `total` determines when and which nuclide a collision occurs; `absorption` determines whether the collision removes neutron weight or terminates the neutron.
 
 Created 2 todos
+
+
+
+Updated todo list
+
+The key bug is in the handoff after `event_advance`: the function selects the minimum of five distances, but the transport loop only asks whether `collision_distance() > boundary().distance()`. That loses information about whether `max_step_len` or `loss_len` actually terminated the step, so changing `macro.total` changes the event classification and therefore the physics.
+
+`macro.total` changes the answer because `event_advance()` uses it to determine `collision_distance()`, but the caller does not know which distance actually won the `std::min`.
+
+In `particle.cpp:296-305`, the selected distance is:
+
+```cpp
+distance = std::min({
+  boundary().distance(),
+  collision_distance(),
+  distance_cutoff,
+  max_step_len,
+  loss_len
+});
+```
+
+But `simulation.cpp:868-876` later decides the event using only:
+
+```cpp
+if (p.collision_distance() > p.boundary().distance()) {
+  p.event_cross_surface();
+} else {
+  p.event_collide();
+}
+```
+
+This is incorrect when `max_step_len` or `loss_len` wins:
+
+- If `collision_distance() < boundary.distance()` but `max_step_len` is smaller, the code calls `event_collide()` at the artificial step limit.
+- If `boundary.distance() < collision_distance()` but `max_step_len` is smaller, the code calls `event_cross_surface()` even though the particle has not reached the boundary.
+- Changing `macro.total` changes `collision_distance()`, which changes which of those incorrect paths is taken.
+
+For pure continuous proton energy loss, the transport event needs a separate “step limit/no collision” state. Do not represent the artificial loss step as either a collision or a surface crossing. For example, add an advance-result/event flag such as:
+
+```cpp
+enum class AdvanceEvent {
+  collision,
+  surface,
+  step_limit,
+  time_limit
+};
+```
+
+Then have `event_advance()` return or store the event selected by the minimum distance. A `step_limit` should re-enter `event_calculate_xs()` and continue propagation without calling `collision()` or `event_cross_surface()`.
+
+The current implementation is therefore not valid for continuous-loss transport: `macro.total` is unintentionally coupled to the numerical stepping and event dispatch.

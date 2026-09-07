@@ -1,10 +1,13 @@
 #ifndef __proton_physics__
 #define __proton_physics__
 
-#include "nuclide.h"
 #include <random>
 #include <cmath>
 //TODO - what RNG to use?? NOT a file local static one pls!!
+
+#include "openmc/nuclide.h"
+using Nuclide_t = openmc::Nuclide;
+//#include "fake_nuclide.h"
 
 namespace openmc{
 static inline std::mt19937 proton_rng {std::random_device {}()};
@@ -39,13 +42,15 @@ inline double random_angle(){
 inline double proton_bethe_bloch(int i_nuclide, double E, double I){
 
     //Access the material base properties from the data table
-    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    //const Nuclide_t& nuclide = *nuclide_list.at(i_nuclide);
+    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
     // Betht-bloch contrib for single atom of THIS Nuclide only, summed later
     double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
     double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
     E = E / 1e6; // Inside here, expecting MeV
     double betasq = (2 * mpcsq + E) * E / pow(mpcsq + E, 2);
-    return 0.3072 * nuclide.Z_ *
+    const double arbitrary_scale = 50;
+    return arbitrary_scale*1e6 * 0.3072 * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
              (betasq); ///??? In what units??
              ///Removed A from denom as we multiply by this to get mass upstream
@@ -53,11 +58,11 @@ inline double proton_bethe_bloch(int i_nuclide, double E, double I){
 }
 
 inline double rutherford_elastic_rate(){
-  return 1e3;
+  return 0;
 }
 
 inline double non_elastic_rate(){
-  return 1e3;
+  return 0;
 }
 
 
