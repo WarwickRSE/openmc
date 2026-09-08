@@ -819,6 +819,8 @@ void Material::calculate_xs(Particle& p) const
   p.macro_xs().absorption = 0.0;
   p.macro_xs().fission = 0.0;
   p.macro_xs().nu_fission = 0.0;
+  p.macro_xs().total_elastic = 0.0;
+  p.macro_xs().total_inelastic = 0.0;
 
   if (p.type().is_neutron()) {
     this->calculate_neutron_xs(p);
@@ -875,9 +877,12 @@ void Material::calculate_proton_xs(Particle& p) const
     //total_density += atom_density;
     total_chi_c += micro.moliere_precomp.first;
     total_chi_a += micro.moliere_precomp.second;
+
+    p.macro_xs().total_elastic += atom_density * micro.elastic;
+    p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
   p.macro_xs().inelastic_threshold = total_inelastic / p.macro_xs().total;
-  double density = 1.0; // TODO URGENT - density of material!!
+  double density = this->density_gpcc();
   p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c, total_chi_a, density);
 
   //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit

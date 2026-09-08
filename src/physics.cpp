@@ -115,13 +115,8 @@ void sample_proton_reaction(Particle&p){
   // Energy loss (applied in event_advance)
   // LARGE angle scattering (probably event advance OR diceroll choice here)
 
-  // TODO IMPORTANT - are we calculating the rates for every nuclide and then only using one??
+  // TODO IMPORTANT - are we calculating the rates for every nuclide and then only using one?? - NO, we need all in order to eval the totals...
 
-
-  // Sample a nuclide within the material (uses proton x-section internally)
-  int i_nuclide = sample_nuclide(p);
-  // Save which nuclide particle had collision with
-  p.event_nuclide() = i_nuclide;
 
   //IGNORE potential for fission , and secondary emissions
 
@@ -131,19 +126,34 @@ void sample_proton_reaction(Particle&p){
   //Decide if it was elastic or inelastic.
   auto ran = next_rand();
   // Can we use transport_distance() here?? I _think_ so...
-  //auto dir = spherical_bm(p.transport_distance(),);
+  std::vector<double> direction_in{1.0, 0.0, 0.0};
+  auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
+  double scat_cos2;
+  
+  // Sample a nuclide within the material (uses proton x-section internally)
+  int i_nuclide;// = sample_nuclide(p);
+  // Save which nuclide particle had collision with
+
   if(ran < p.macro_xs().inelastic_threshold){
-    std::cout<<"Collision inelastic"<<std::endl;
+    //std::cout<<"Collision inelastic"<<std::endl;
+    i_nuclide = sample_nuclide(p, CType::inelastic);
     //Inelastic scattering case
+    auto tmp = non_elastic_scatter(p.E());
+    scat_cos2 = tmp.second;
+    p.E() = tmp.first; // Updating energy from inelastic collision
   }else{
     //Elastic scattering case
-     std::cout<<"Collision elastic"<<std::endl;
+    //std::cout<<"Collision elastic"<<std::endl;
+    i_nuclide = sample_nuclide(p, CType::elastic);
+    scat_cos2 = rutherford_elastic_scatter();
   }
+  //Updating direction from either case
 
-  auto mu = random_angle();
-  p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
-  p.mu() = mu; 
-
+  //auto mu = random_angle();
+  p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
+  p.mu() = scat_cos2; 
+  
+  p.event_nuclide() = i_nuclide;
   p.event() = TallyEvent::SCATTER;
 
 }
@@ -548,15 +558,26 @@ void sample_positron_reaction(Particle& p)
   p.event() = TallyEvent::ABSORB;
 }
 
-int sample_nuclide(Particle& p)
+int sample_nuclide(Particle& p, CType type)
 {
   // Sample cumulative distribution function
-  double cutoff = prn(p.current_seed()) * p.macro_xs().total;
-
+  double cutoff;
+  if(p.type().is_proton()){
+    if(type == CType::total){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total;
+    }else if(type == CType::elastic){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total_elastic;
+    }else if(type == CType::inelastic){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total_inelastic;
+    }else{
+      throw std::runtime_error("Bad collision type for proton!");
+    }
+  }else{
+    cutoff = prn(p.current_seed()) * p.macro_xs().total;
+  }
   // Get pointers to nuclide/density arrays
   const auto& mat {model::materials[p.material()]};
   int n = mat->nuclide_.size();
-
   double prob = 0.0;
   for (int i = 0; i < n; ++i) {
     // Get atom density
@@ -566,7 +587,13 @@ int sample_nuclide(Particle& p)
     // Increment probability to compare to cutoff
     if(p.type().is_proton()){
       // Special case for SDE model
-      prob += atom_density * p.proton_xs(i_nuclide).total;
+      if(type == CType::total){
+        prob += atom_density * p.proton_xs(i_nuclide).total;
+      }else if(type == CType::elastic){
+        prob += atom_density * p.proton_xs(i_nuclide).elastic;
+      }else if(type == CType::inelastic){
+        prob += atom_density * p.proton_xs(i_nuclide).inelastic;
+      }
     }else{
       prob += atom_density * p.neutron_xs(i_nuclide).total;
     }

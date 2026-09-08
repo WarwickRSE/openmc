@@ -246,7 +246,6 @@ inline double energy_straggling_update_sq(double e){
       */
 
 
-  // Re-impl from Fortran
   //From the test code
 
   inline double log_a(const int k, const int m, const double theta){
@@ -327,12 +326,14 @@ inline double energy_straggling_update_sq(double e){
       y = sample_beta(1 + m);
     } else {
       y = r / 2;
-      //y = fabs(std::normal_distribution<sqrt(r * y * (1 - y))>)); //HMMMMM need to figure this out TODO URGENT
+      std::normal_distribution<double> distribution(0.0, sqrt(r * y * (1 - y)));
+      auto sample = distribution(proton_rng);
+      y = std::abs(sample);
     }
     return y;
   }
 
-  inline std::pair<double, double> spherical_bm(double distance, double energy, int i_mat, std::vector<double> direction_in, std::pair<double,double> moliere_transformed_precomp){
+  inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, std::pair<double,double> moliere_transformed_precomp){
     /* Re-translated from the Fortran decisions
     !> \brief Simulation of the spherical Brownian motion process
     !> Based on Algorithm 1 in [2] 
@@ -501,6 +502,16 @@ inline double energy_straggling_update_sq(double e){
      std::cout<<filename<<std::endl;
     nuclide.proton_el_rate = CS_1d(filename);
     nuclide.proton_el_rate.check();
+    nuclide.proton_el_xsec = CS_2d(filename, 0.04);
+  }
+
+  inline double rutherford_elastic_scatter(){
+    return random_angle(); //TODO actual
+    //Need the 2D cross section here.
+  }
+
+  inline std::pair<double, double> non_elastic_scatter(double initial_energy){
+    return {initial_energy - next_rand()*1e3, random_angle()}; // TODO actual
   }
 
 };

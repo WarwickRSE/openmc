@@ -10,6 +10,7 @@
 
 namespace openmc {
 
+enum CType{total, elastic, inelastic};
 //==============================================================================
 // Non-member functions
 //==============================================================================
@@ -47,7 +48,7 @@ void sample_positron_reaction(Particle& p);
 //!
 //! \param[in] p Particle
 //! \return Index in the data::nuclides vector
-int sample_nuclide(Particle& p);
+int sample_nuclide(Particle& p, CType type=CType::total);
 
 //! Determine the average total, prompt, and delayed neutrons produced from
 //! fission and creates appropriate bank sites.

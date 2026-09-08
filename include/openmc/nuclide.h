@@ -132,6 +132,7 @@ public:
   vector<int> index_inelastic_scatter_;
 
   CS_1d proton_ne_rate, proton_el_rate;
+  CS_2d proton_el_xsec;
 
 private:
   void create_derived(
