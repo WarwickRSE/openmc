@@ -971,6 +971,7 @@ void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
     micro.energy_straggling = energy_straggling_sd(i_nuclide);
     micro.elastic = rutherford_elastic_rate(i_nuclide, E());
     micro.inelastic = non_elastic_rate(i_nuclide, E());
+    micro.moliere_precomp = moliere_scattering_precomp(i_nuclide, E());
     micro.total = micro.elastic + micro.inelastic;
   }
   

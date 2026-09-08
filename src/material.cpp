@@ -28,6 +28,8 @@
 #include "openmc/thermal.h"
 #include "openmc/xml_interface.h"
 
+#include "openmc/protons.h"
+
 namespace openmc {
 
 //==============================================================================
@@ -840,6 +842,8 @@ void Material::calculate_proton_xs(Particle& p) const
     std::log(p.E() / data::energy_min[proton]) / simulation::log_spacing;
 
   double total_density = 0.0;
+  double total_inelastic = 0.0;
+  double total_chi_c = 0.0, total_chi_a = 0.0;
   // Add contribution from each nuclide in material
   for (int i = 0; i < nuclide_.size(); ++i) {
     // ======================================================================
@@ -861,6 +865,7 @@ void Material::calculate_proton_xs(Particle& p) const
 
     // Add contributions to cross sections
     p.macro_xs().total += atom_density * micro.total;
+    total_inelastic += atom_density * micro.inelastic;
     p.macro_xs().absorption += atom_density * micro.absorption;
     // TODO Converting from barn to cm...
     p.macro_xs().loss_rate += atom_density * barn2Avo * micro.loss_rate;
@@ -868,7 +873,13 @@ void Material::calculate_proton_xs(Particle& p) const
     //Energy straggling cached part. 
     p.macro_xs().energy_straggling += barn2Avo * atom_density * micro.energy_straggling;
     //total_density += atom_density;
+    total_chi_c += micro.moliere_precomp.first;
+    total_chi_a += micro.moliere_precomp.second;
   }
+  p.macro_xs().inelastic_threshold = total_inelastic / p.macro_xs().total;
+  double density = 1.0; // TODO URGENT - density of material!!
+  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c, total_chi_a, density);
+
   //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit
 
 }

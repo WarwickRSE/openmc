@@ -196,6 +196,7 @@ struct NuclideProtonMicroXS {
   double elastic; //!< Rate for elastic scattering
   double inelastic; //!< Rate for inelastic
   bool use_inelastic; //<! Whether next event should be inelastic or not
+  std::pair<double, double> moliere_precomp; //<! The parts of the moliere pre-calc per nuclide
 
 /*  // Indicies and factors needed to compute cross sections from the data tables
   int index_grid;       //!< Index on nuclide energy grid
@@ -238,6 +239,8 @@ struct MacroXS {
   double photon_prod; //!< macroscopic photon production xs
   double loss_rate; //!< per-cm energy loss rate for applicable particles
   double energy_straggling; //!per-cm ??? energy randomisation for applicable particles
+  double inelastic_threshold; //Normalized value, inelastic/total
+  std::pair<double, double> moliere; //Temporary - multiple scattering partial computation
 
   // Photon cross sections
   double coherent;        //!< macroscopic coherent xs

@@ -128,6 +128,18 @@ void sample_proton_reaction(Particle&p){
   //Neutrons effects are in several functions, scatter etc. Just do this here for now
   //From neutron scatter:
 
+  //Decide if it was elastic or inelastic.
+  auto ran = next_rand();
+  // Can we use transport_distance() here?? I _think_ so...
+  //auto dir = spherical_bm(p.transport_distance(),);
+  if(ran < p.macro_xs().inelastic_threshold){
+    std::cout<<"Collision inelastic"<<std::endl;
+    //Inelastic scattering case
+  }else{
+    //Elastic scattering case
+     std::cout<<"Collision elastic"<<std::endl;
+  }
+
   auto mu = random_angle();
   p.u() = rotate_angle(p.u(), mu, nullptr, p.current_seed());
   p.mu() = mu; 
