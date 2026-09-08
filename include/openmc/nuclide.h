@@ -20,6 +20,7 @@
 #include "openmc/urr.h"
 #include "openmc/vector.h"
 #include "openmc/wmp.h"
+#include "openmc/proton_cross_sections.h"
 
 namespace openmc {
 
@@ -129,6 +130,8 @@ public:
   vector<unique_ptr<Reaction>> reactions_; //!< Reactions
   array<size_t, 902> reaction_index_;      //!< Index of each reaction
   vector<int> index_inelastic_scatter_;
+
+  CS_1d proton_ne_rate, proton_el_rate;
 
 private:
   void create_derived(

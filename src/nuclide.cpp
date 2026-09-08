@@ -15,6 +15,8 @@
 #include "openmc/string_utils.h"
 #include "openmc/thermal.h"
 
+#include "openmc/protons.h"
+
 #include <fmt/core.h>
 
 #include "openmc/tensor.h"
@@ -1138,6 +1140,9 @@ extern "C" int openmc_load_nuclide(const char* name, const double* temps, int n)
     int i_nuclide = data::nuclide_map.at(name);
     if (settings::temperature_multipole)
       read_multipole_data(i_nuclide);
+
+    // Reading additional proton x-sections - TODO - should add something to settings etc??
+    if(true) read_proton_data(i_nuclide, name);
 
     // Read elemental data, if necessary
     if (settings::photon_transport) {
