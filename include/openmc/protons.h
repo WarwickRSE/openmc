@@ -16,6 +16,7 @@ using Nuclide_t = openmc::Nuclide;
 namespace openmc{
 static inline std::mt19937 proton_rng {std::random_device {}()};
 constexpr double MAX_DEFLECTION = 1.0e-2; // radians
+constexpr double fixed_step = 0.05; // A fixed step length used in temporary calc
 
 static inline std::uniform_real_distribution<double> uniform_dist {0.0, 1.0};
 static inline std::uniform_real_distribution<double> angle_dist {std::cos(MAX_DEFLECTION), 1.0};
@@ -224,19 +225,19 @@ inline double energy_straggling_update_sq(double e){
     auto temp1 = nuclide.Z_ * (nuclide.Z_ + 1.0)/nuclide.A_;
         //chi_c_sq = chi_c_sq + temp1
         //! (chi_alpha,i)^2, note pv_sq = (p * beta)^2
-    auto temp2 = 2.007E-5 * std::pow(nuclide.Z_, 2.0/3.0) * (1.0 + 3.34 * std::pow(nuclide.Z_ * alpha/beta_sq, 2)) * beta_sq / pv_sq;
+    auto temp2 = 2.007E-5 * std::pow(nuclide.Z_, 2.0/3.0) * (1.0 + 3.34 * std::pow(nuclide.Z_ * alpha, 2)/beta_sq) * beta_sq / pv_sq;
     return {temp1, temp1 * log(temp2)};
   }
-  inline std::pair<double, double> moliere_transform(double energy, double sum_c, double sum_a, double density){
-    const double fixed_step = 0.05;
+  inline double moliere_transform(double energy, double sum_c, double sum_a, double density){
     auto chi_a_sq = exp(sum_a/sum_c);
     energy = energy / 1e6;
     const double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
     auto pv_sq = (2.0 * mpcsq + energy) * energy / (mpcsq + energy);
     pv_sq = pv_sq * pv_sq;
-    auto chi_c_sq = sum_c + 0.157 * fixed_step * density / pv_sq;
+    auto chi_c_sq = sum_c * 0.157 * fixed_step * density / pv_sq;
     auto omega = chi_c_sq / (chi_a_sq * 2.0 * (1.0 - 0.98)); // 0.98
-    return {chi_c_sq, omega};
+    double result =  chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2));
+    return result;
   }
     /*
     ! normalise and eliminate the log, 
@@ -337,7 +338,7 @@ inline double energy_straggling_update_sq(double e){
     return y;
   }
 
-  inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, std::pair<double,double> moliere_transformed_precomp){
+  inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_transformed_precomp){
     /* Re-translated from the Fortran decisions
     !> \brief Simulation of the spherical Brownian motion process
     !> Based on Algorithm 1 in [2] 
@@ -399,9 +400,7 @@ inline double energy_straggling_update_sq(double e){
 
     z=direction_in;
 
-    auto chi_c_sq = moliere_transformed_precomp.first;
-    auto omega = moliere_transformed_precomp.second;
-    auto moliere_sd_sq = (distance/0.05 * chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2)));
+    auto moliere_sd_sq = (distance/fixed_step)* moliere_transformed_precomp;
     auto y = wright_fisher_diffusion(moliere_sd_sq);
     auto theta = 2.0 * PI * next_rand();
 
@@ -430,9 +429,12 @@ inline double energy_straggling_update_sq(double e){
       auto direction_out_1 = acos(w[2]);
       auto direction_out_2 = atan2(w[1], w[0]);
 
-      direction_out_1 = dot_product(direction_in,w)/sqrt(dot_product(w,w));
+      std::cout<<direction_out_1<<" "<<direction_out_2<<std::endl;
+      //TODO either actualyl Fake direction in, and skip the extra checks OR pass the real direction and update it
+      //direction_out_1 = dot_product(direction_in,w)/sqrt(dot_product(w,w));
       //! might not need the denominator if w unity vector
-      return{direction_out_1, direction_out_2};
+      //return {0.98, 0.1};
+      return{cos(direction_out_1), direction_out_2};
   }
 
 

@@ -270,6 +270,7 @@ void Particle::event_calculate_xs()
     macro_xs().total_inelastic = 0.0;
     macro_xs().energy_straggling = 0.0;
     macro_xs().inelastic_threshold = 0.0;
+    macro_xs().moliere = 0.0;
   }
 }
 

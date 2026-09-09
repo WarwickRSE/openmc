@@ -878,10 +878,11 @@ void Material::calculate_proton_xs(Particle& p) const
     //std::cout<<i<<" "<<data::nuclides[i_nuclide]->name_ <<" "<<atom_density / N_AVOGADRO<<std::endl;
 
     //Energy straggling cached part. 
-    p.macro_xs().energy_straggling += atom_density * micro.energy_straggling;
-    total_density += atom_density;
-    total_chi_c += micro.moliere_precomp.first;
-    total_chi_a += micro.moliere_precomp.second;
+    p.macro_xs().energy_straggling += atom_density * awr * micro.energy_straggling;
+    total_density += atom_density * awr;
+
+    total_chi_c += micro.moliere_precomp.first * atom_density * awr;
+    total_chi_a += micro.moliere_precomp.second * atom_density * awr;
 
     p.macro_xs().total_elastic += atom_density * micro.elastic;
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
@@ -894,7 +895,8 @@ void Material::calculate_proton_xs(Particle& p) const
   double density = this->density_gpcc();
   //std::cout<<"Density "<<density<<std::endl;
   //std::cout<<"loss rate "<< p.macro_xs().loss_rate<<std::endl;
-  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c, total_chi_a, density);
+  // Check this idiom as well - is summing (X * atom_density) then divide by total the same as the mass fraction?
+  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c/total_density, total_chi_a/total_density, density);
 
   //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit
 

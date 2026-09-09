@@ -125,7 +125,10 @@ void sample_proton_reaction(Particle&p){
   //Decide if it was elastic or inelastic.
   auto ran = next_rand();
   // Can we use transport_distance() here?? I _think_ so...
-  std::vector<double> direction_in{1.0, 0.0, 0.0};
+  // TODO - since we have the initial direction, should we pass that properly here?
+  // Should we update it internal to the function, or apply rotate_angle below?
+  //std::vector<double> direction_in{1.0, 0.0, 0.0};
+  std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
   auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
   double scat_cos2 = 1.0;
   
@@ -158,8 +161,18 @@ void sample_proton_reaction(Particle&p){
   //TODO now combine the scattering angle with the dir update from BM, assuming a random azimuth for the scattering....
 
   //auto mu = random_angle();
+  //Since in this case we _have_ direction I think we can apply this rotate twice
+  // Alternately, we could sum the two corrections. 
+  // NOTE: this function takes a random phi if not specified
+  std::cout<<dir.first<<" "<<dir.second<<std::endl;
+  const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
+  //Constructing the new direction from spherical BM
+  p.u() = {sin_theta * std::cos(dir.second),
+         sin_theta * std::sin(dir.second),
+         dir.first};
+  //p.u() = rotate_angle(p.u(), dir.first, &dir.second, p.current_seed());
   p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
-  p.mu() = scat_cos2; 
+  //p.mu() = scat_cos2; // TODO - need to combine the two angles here
   
   //Storing stuff about what happened
   p.event_nuclide() = i_nuclide;
