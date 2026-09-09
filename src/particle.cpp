@@ -316,7 +316,8 @@ void Particle::event_advance()
   double E_before = E();
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
     double energyLossPer = this->macro_xs().loss_rate;
-    double energyStraggle = std::sqrt(this->macro_xs().energy_straggling * energy_straggling_update_sq(E()) * distance) * random_straggle();
+    std::cout<<E()<<" "<<energyLossPer<<" "<<energyLossPer*distance << std::endl;
+    double energyStraggle = 0.0; // std::sqrt(this->macro_xs().energy_straggling * energy_straggling_update_sq(E()) * distance) * random_straggle();
     //std::cout<<energyLossPer<<" "<<E()<<" "<<energyStraggle<< std::endl;
     E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
   }

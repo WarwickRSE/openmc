@@ -860,6 +860,7 @@ void Material::calculate_proton_xs(Particle& p) const
     //Mean Excitation Energy enters non-linearly into the equation
     p.update_proton_xs(i_nuclide, i_grid, MEE_material);
     auto& micro = p.proton_xs(i_nuclide);
+    const double awr = settings::run_CE ? data::nuclides[i_nuclide]->awr_ : 1.0;
 
    //Sum over nucleides etc
     // Copy atom density of nuclide in material
@@ -869,8 +870,11 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().total += atom_density * micro.total;
     total_inelastic += atom_density * micro.inelastic;
     p.macro_xs().absorption += atom_density * micro.absorption;
-    // TODO Converting from barn to cm...
-    p.macro_xs().loss_rate += atom_density * barn2Avo * micro.loss_rate;
+    
+    
+    //Converting from barn to cm and multiplying by density
+    p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
+    std::cout<<i<<" "<<data::nuclides[i_nuclide]->name_ <<" "<<atom_density / N_AVOGADRO<<std::endl;
 
     //Energy straggling cached part. 
     p.macro_xs().energy_straggling += barn2Avo * atom_density * micro.energy_straggling;
@@ -882,7 +886,10 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
   p.macro_xs().inelastic_threshold = total_inelastic / p.macro_xs().total;
+  //std::cout<<"vals "<<p.macro_xs().total<<" "<<p.macro_xs().total_elastic<<" "<<p.macro_xs().total_inelastic<<std::endl;
   double density = this->density_gpcc();
+  //std::cout<<"Density "<<density<<std::endl;
+  std::cout<<"loss rate "<< p.macro_xs().loss_rate<<std::endl;
   p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c, total_chi_a, density);
 
   //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit

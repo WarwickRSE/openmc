@@ -12,7 +12,7 @@ water = openmc.Material()
 water.add_element('H', 2.0)
 water.add_element('O', 1.0)
 #water.add_nuclide('H2', 2.0)
-water.set_density('g/cm3', 0.01)
+water.set_density('g/cm3', 1.0)
 #water.set_density('g/cm3', 0.0006) # Steam
 water.temperature = 300 # K
 
@@ -63,7 +63,7 @@ settings.source = source
 settings.batches = 1
 settings.inactive = 10
 settings.particles = 1000
-settings.verbosity = 7
+settings.verbosity = 10
 
 settings.track = [(1, 1, particle) for particle in range(1, int(settings.particles/10))]
 

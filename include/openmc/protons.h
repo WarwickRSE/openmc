@@ -89,12 +89,10 @@ inline double proton_bethe_bloch(int i_nuclide, double E, double I){
     double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
     E = E / 1e6; // Inside here, expecting MeV
     double betasq = (2 * mpcsq + E) * E / pow(mpcsq + E, 2);
-    const double arbitrary_scale = 100;
-    return arbitrary_scale*1e6 * 0.3072 * nuclide.Z_ *
+    return 1e6 * 0.3072 * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
              (betasq); ///??? In what units??
-             ///Removed A from denom as we multiply by this to get mass upstream
-    
+        //TODO divides by A_ only to multiply by it later??
 }
 
 inline double random_straggle(){
@@ -155,7 +153,7 @@ inline double energy_straggling_update_sq(double e){
     ret *= exp(log_barns_to_cmsq + log_molecule_density);
     return ret; // rate per cm*/
     const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    const double arbitrary_factor = 5e1;
+    const double arbitrary_factor = 1;
     return arbitrary_factor * nuclide.proton_el_rate.evaluate(e/1e6) * nuclide.Z_ / nuclide.A_;
     //return 1e4;
   }
