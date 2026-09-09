@@ -121,38 +121,47 @@ void sample_proton_reaction(Particle&p){
   //IGNORE potential for fission , and secondary emissions
 
   //Neutrons effects are in several functions, scatter etc. Just do this here for now
-  //From neutron scatter:
 
   //Decide if it was elastic or inelastic.
   auto ran = next_rand();
   // Can we use transport_distance() here?? I _think_ so...
   std::vector<double> direction_in{1.0, 0.0, 0.0};
   auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
-  double scat_cos2;
+  double scat_cos2 = 1.0;
   
   // Sample a nuclide within the material (uses proton x-section internally)
-  int i_nuclide;// = sample_nuclide(p);
-  // Save which nuclide particle had collision with
+  int i_nuclide = 0;// = sample_nuclide(p);
+  // Will Save which nuclide particle had collision with
 
-  if(ran < p.macro_xs().inelastic_threshold){
-    //std::cout<<"Collision inelastic"<<std::endl;
-    i_nuclide = sample_nuclide(p, CType::inelastic);
-    //Inelastic scattering case
-    auto tmp = non_elastic_scatter(p.E());
-    scat_cos2 = tmp.second;
-    p.E() = tmp.first; // Updating energy from inelastic collision
-  }else{
-    //Elastic scattering case
-    //std::cout<<"Collision elastic"<<std::endl;
-    i_nuclide = sample_nuclide(p, CType::elastic);
-    scat_cos2 = rutherford_elastic_scatter();
+  //Deciding whether to do an elastic, inelastic or neither
+  double path_to_next_event = random_exp(p.macro_xs().total);
+  if(p.transport_distance() > path_to_next_event){
+    if(ran < p.macro_xs().inelastic_threshold){
+      //std::cout<<"Collision inelastic"<<std::endl;
+      /*i_nuclide = sample_nuclide(p, CType::inelastic);
+      //Inelastic scattering case
+      auto tmp = non_elastic_scatter(p.E());
+      scat_cos2 = tmp.second;
+      p.E() = tmp.first; // Updating energy from inelastic collision
+      */
+    }else{
+      //Elastic scattering case
+      //std::cout<<"Collision elastic"<<std::endl;
+      i_nuclide = sample_nuclide(p, CType::elastic);
+      scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E());
+    }
   }
   //Updating direction from either case
+  //scat_cos2 = 1.0;
+  std::cout<<scat_cos2<<std::endl;
+
+  //TODO now combine the scattering angle with the dir update from BM, assuming a random azimuth for the scattering....
 
   //auto mu = random_angle();
   p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
   p.mu() = scat_cos2; 
   
+  //Storing stuff about what happened
   p.event_nuclide() = i_nuclide;
   p.event() = TallyEvent::SCATTER;
 

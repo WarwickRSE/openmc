@@ -58,6 +58,11 @@ inline double random_angle(){
   return angle_dist(proton_rng);
 }
 
+inline double random_exp(double lambda){
+  std::exponential_distribution<double> generic_exp(lambda);
+  return generic_exp(proton_rng);
+}
+
   inline double dot_product(std::vector<double> a, std::vector<double> b){
     //Dot product IFF length of a and b is 3
     double val = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
@@ -126,8 +131,8 @@ inline double energy_straggling_update_sq(double e){
     //double log_barns_to_cmsq = -24 * log(10);
     //double ret = 0;
     const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    const double arbitrary_factor = 1e5;
-    return arbitrary_factor * nuclide.proton_ne_rate.evaluate(e) * nuclide.Z_ / nuclide.A_;
+    const double arbitrary_factor = 1e-50;
+    return arbitrary_factor * nuclide.proton_ne_rate.evaluate(e/1e6) * nuclide.Z_ / nuclide.A_;
     //TODO URGENT units
     /*for (unsigned int i = 0; i < at.size(); i++) {
       ret += x[i] * at[i].ne_rate.evaluate(e) / at[i].a;
@@ -150,8 +155,8 @@ inline double energy_straggling_update_sq(double e){
     ret *= exp(log_barns_to_cmsq + log_molecule_density);
     return ret; // rate per cm*/
     const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    const double arbitrary_factor = 1e5;
-    return arbitrary_factor * nuclide.proton_el_rate.evaluate(e) * nuclide.Z_ / nuclide.A_;
+    const double arbitrary_factor = 5e1;
+    return arbitrary_factor * nuclide.proton_el_rate.evaluate(e/1e6) * nuclide.Z_ / nuclide.A_;
     //return 1e4;
   }
 
@@ -505,8 +510,13 @@ inline double energy_straggling_update_sq(double e){
     nuclide.proton_el_xsec = CS_2d(filename, 0.04);
   }
 
-  inline double rutherford_elastic_scatter(){
-    return random_angle(); //TODO actual
+  inline double rutherford_elastic_scatter(int i_nuclide, double e){
+    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
+    //std::cout<<"sampling rutherford "<<std::endl;
+    auto alpha = nuclide.proton_el_xsec.sample(e/1e6, next_rand());
+    //std::cout<<"Done sampling "<<std::endl;
+    return cos(alpha); //TODO URGENT cm to lab??
+    //return random_angle(); //TODO actual
     //Need the 2D cross section here.
   }
 

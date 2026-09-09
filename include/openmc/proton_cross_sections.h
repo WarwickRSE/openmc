@@ -327,10 +327,10 @@ struct CS_2d {
     return ret;
   }
 
-  /*double sample(const double e, gsl_rng *gen) const {
+  double sample(const double e, double u) const {
     int energy_index = std::distance(
         energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
-    double u = gsl_rng_uniform(gen);
+    //double u = gsl_rng_uniform(gen);
     double out_angle_cm;
     double out_angle_cm_2;
     double diff;
@@ -349,7 +349,7 @@ struct CS_2d {
       }
     }
     return out_angle_cm;
-  }*/
+  }
 
   std::vector<double> energy;
   std::vector<std::vector<double>> exit_angle, cdf;
