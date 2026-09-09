@@ -843,6 +843,7 @@ void Material::calculate_proton_xs(Particle& p) const
   int i_grid =
     std::log(p.E() / data::energy_min[proton]) / simulation::log_spacing;
 
+  const double log_avogadro = log(6) + 23 * log(10);
   double total_density = 0.0;
   double total_inelastic = 0.0;
   double total_chi_c = 0.0, total_chi_a = 0.0;
@@ -874,11 +875,11 @@ void Material::calculate_proton_xs(Particle& p) const
     
     //Converting from barn to cm and multiplying by density
     p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
-    std::cout<<i<<" "<<data::nuclides[i_nuclide]->name_ <<" "<<atom_density / N_AVOGADRO<<std::endl;
+    //std::cout<<i<<" "<<data::nuclides[i_nuclide]->name_ <<" "<<atom_density / N_AVOGADRO<<std::endl;
 
     //Energy straggling cached part. 
-    p.macro_xs().energy_straggling += barn2Avo * atom_density * micro.energy_straggling;
-    //total_density += atom_density;
+    p.macro_xs().energy_straggling += atom_density * micro.energy_straggling;
+    total_density += atom_density;
     total_chi_c += micro.moliere_precomp.first;
     total_chi_a += micro.moliere_precomp.second;
 
@@ -886,10 +887,13 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
   p.macro_xs().inelastic_threshold = total_inelastic / p.macro_xs().total;
+  //Adding other material dependent factors - TODO move into a function
+  p.macro_xs().energy_straggling /= total_density; // TODO double check this factor
+  p.macro_xs().energy_straggling *= (this->density_gpcc()) * exp(log_avogadro); 
   //std::cout<<"vals "<<p.macro_xs().total<<" "<<p.macro_xs().total_elastic<<" "<<p.macro_xs().total_inelastic<<std::endl;
   double density = this->density_gpcc();
   //std::cout<<"Density "<<density<<std::endl;
-  std::cout<<"loss rate "<< p.macro_xs().loss_rate<<std::endl;
+  //std::cout<<"loss rate "<< p.macro_xs().loss_rate<<std::endl;
   p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c, total_chi_a, density);
 
   //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit

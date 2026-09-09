@@ -96,7 +96,7 @@ inline double proton_bethe_bloch(int i_nuclide, double E, double I){
 }
 
 inline double random_straggle(){
-  const double arbitrary_scale = 1e17;
+  const double arbitrary_scale = 1;
   return arbitrary_scale * e_strag(proton_rng);
 }
 //Random bump - Energy loss or gain due to straggling. Depends on e and material
@@ -107,11 +107,12 @@ inline double energy_straggling_update_sq(double e){
     double log_c = log(29979245800);                              // cm / s
     double log_avogadro = log(6) + 23 * log(10);
     double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
+    e = e/1e6;
     double betasq = (2 * mpcsq + e) * e / pow(mpcsq + e, 2);
     //double log_molecule_density =
         //log(density) + log_avogadro; // molecules / cm^3
     double ret =
-        4 * PI * (1 - betasq / 2) / sqrt(1 - betasq) *
+        4 * PI * (1 - betasq / 2) / (1 - betasq) *
         exp(2 * (log(alpha) + log_hbar + log_c));
     return ret;
 }
@@ -154,7 +155,7 @@ inline double energy_straggling_update_sq(double e){
     return ret; // rate per cm*/
     const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
     const double arbitrary_factor = 1;
-    return arbitrary_factor * nuclide.proton_el_rate.evaluate(e/1e6) * nuclide.Z_ / nuclide.A_;
+    return nuclide.proton_el_rate.evaluate(e/1e6);// / nuclide.A_;
     //return 1e4;
   }
 
