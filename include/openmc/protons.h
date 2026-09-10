@@ -131,8 +131,7 @@ inline double energy_straggling_update_sq(double e){
     //double log_barns_to_cmsq = -24 * log(10);
     //double ret = 0;
     const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    const double arbitrary_factor = 1e-50;
-    return arbitrary_factor * nuclide.proton_ne_rate.evaluate(e/1e6) * nuclide.Z_ / nuclide.A_;
+    return nuclide.proton_ne_rate.evaluate(e/1e6);
     //TODO URGENT units
     /*for (unsigned int i = 0; i < at.size(); i++) {
       ret += x[i] * at[i].ne_rate.evaluate(e) / at[i].a;
@@ -429,7 +428,7 @@ inline double energy_straggling_update_sq(double e){
       auto direction_out_1 = acos(w[2]);
       auto direction_out_2 = atan2(w[1], w[0]);
 
-      std::cout<<direction_out_1<<" "<<direction_out_2<<std::endl;
+      //std::cout<<direction_out_1<<" "<<direction_out_2<<std::endl;
       //TODO either actualyl Fake direction in, and skip the extra checks OR pass the real direction and update it
       //direction_out_1 = dot_product(direction_in,w)/sqrt(dot_product(w,w));
       //! might not need the denominator if w unity vector
@@ -509,6 +508,9 @@ inline double energy_straggling_update_sq(double e){
     nuclide.proton_el_rate = CS_1d(filename);
     nuclide.proton_el_rate.check();
     nuclide.proton_el_xsec = CS_2d(filename, 0.04);
+
+    filename = path + sym+ "_ne_energyangle_cdf.txt";
+    nuclide.proton_ne_xsec = CS_3d(filename);
   }
 
   inline double rutherford_elastic_scatter(int i_nuclide, double e){
@@ -521,8 +523,66 @@ inline double energy_straggling_update_sq(double e){
     //Need the 2D cross section here.
   }
 
-  inline std::pair<double, double> non_elastic_scatter(double initial_energy){
-    return {initial_energy - next_rand()*1e3, random_angle()}; // TODO actual
+  inline double s(double a, double z) {
+    double a_c = a + 1;
+    double n_c = a - z;
+    double z_c = z + 1;
+    double a_a = a;
+    double n_a = a - z;
+    double z_a = z;
+    double ret = 15.68 * (a_c - a_a) -
+                 28.07 * (pow(n_c - z_c, 2) / a_c - pow(n_a - z_a, 2) / a_a) -
+                 18.56 * (pow(a_c, 2.0 / 3) - pow(a_a, 2.0 / 3)) +
+                 33.22 * (pow(n_c - z_c, 2) / pow(a_c, 4.0 / 3) -
+                          pow(n_a - z_a, 2) / pow(a_a, 4.0 / 3)) -
+                 0.717 * (z_c * z_c / pow(a_c, 1.0 / 3) -
+                          z_a * z_a / pow(a_a, 1.0 / 3)) +
+                 1.211 * (z_c * z_c / a_c - z_a * z_a / a_a);
+    return ret;
+  }
+
+  inline void sample_nonelastic_collision(double a, double z, double &e, double &alpha, double out_rvalue, double out_energy_cm, double u2){
+    //double out_rvalue, out_energy_cm;
+    //ne_energy_angle.sample(e, out_rvalue, out_energy_cm, u);
+    double eps_a = a * e / (a + 1);
+    double eps_b = (a + 1) * out_energy_cm / a;
+    double e_a = eps_a + s(a, z);
+    double e_b = eps_b + s(a, z);
+    double x1 = fmin(e_a, 130) * e_b / e_a;
+    double x3 = fmin(e_a, 41) * e_b / e_a;
+    double aval = 0.04 * x1 + 1.8 * 1e-6 * pow(x1, 3) + 6.7 * 1e-7 * pow(x3, 4);
+    double cdfc2 = out_rvalue * cosh(aval) - sinh(aval);
+    double cdfc1 = 2 * sinh(aval);
+    //double u2 = gsl_rng_uniform(gen);
+    double z1 = cdfc1 * u2 + cdfc2;
+    double z2 =
+        (z1 + sqrt(pow(z1, 2) - pow(out_rvalue, 2) + 1)) / (out_rvalue + 1);
+    double out_angle_cm = log(z2) / aval;
+    double out_energy_lab =
+        out_energy_cm + e / pow(a + 1, 2) +
+        2 * sqrt(out_energy_cm * e) * out_angle_cm / (a + 1);
+    double out_angle_lab = sqrt(out_energy_cm / out_energy_lab) * out_angle_cm +
+                           sqrt(e / out_energy_lab) / (a + 1);
+    e = out_energy_lab;
+    alpha = out_angle_lab;
+    if (out_energy_cm == 0) {
+      e = 0;
+      alpha = 1; // If outgoing energy is 0, then out_angle_lab should be 1,
+                 // rounding errors allow it to be slightly above 1 which is
+                 // invalid.
+    }
+  }
+
+  inline std::pair<double, double> non_elastic_scatter(int i_nuclide, double e){
+    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
+    double beta = 2.0 * PI * next_rand();
+    double out_rvalue, out_energy, alpha;
+    double e_tmp = e/1e6;
+    nuclide.proton_ne_xsec.sample(e_tmp, out_rvalue, out_energy, next_rand());
+    
+    double atomic_wt = nuclide.A_, z=nuclide.Z_;
+    sample_nonelastic_collision(atomic_wt, z, e_tmp, alpha, out_rvalue, out_energy, next_rand());
+    return {e_tmp*1e6, alpha};
   }
 
 };

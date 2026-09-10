@@ -196,10 +196,9 @@ struct CS_3d {
     return;
   }
 
-  /*void sample(const double e, double &r, double &out_e_cm, gsl_rng *gen) const {
+  void sample(const double e, double &r, double &out_e_cm, double u) const {
     int energy_index = std::distance(
         energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
-    double u = gsl_rng_uniform(gen);
     double out_energy_cm;
     double out_energy_cm_2;
     double out_rvalue;
@@ -224,7 +223,7 @@ struct CS_3d {
     r = out_rvalue;
     out_e_cm = out_energy_cm;
     return;
-  }*/
+  }
 
   std::vector<double> energy;
   std::vector<std::vector<double>> exit_energy, cdf, rvalue;

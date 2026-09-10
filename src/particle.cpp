@@ -323,7 +323,7 @@ void Particle::event_advance()
     //std::cout<<
     //Form the total energy correction Zeta2 - this is in MeV so factor 1e6
     double energyStraggle = std::sqrt(this->macro_xs().energy_straggling * energy_straggling_update_sq(E()) * distance) * random_straggle()*1e6;
-    std::cout<<energyLossPer<<" "<<E()<<" "<<energyStraggle<< std::endl;
+    //std::cout<<energyLossPer<<" "<<E()<<" "<<energyStraggle<< std::endl;
 
     E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
   }

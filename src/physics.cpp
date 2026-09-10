@@ -138,39 +138,40 @@ void sample_proton_reaction(Particle&p){
 
   //Deciding whether to do an elastic, inelastic or neither
   double path_to_next_event = random_exp(p.macro_xs().total);
+  //std::cout<<"Choosing "<<ran<<" "<<p.macro_xs().inelastic_threshold<<std::endl;
+  //std::cout<<path_to_next_event<<std::endl;
   if(p.transport_distance() > path_to_next_event){
     if(ran < p.macro_xs().inelastic_threshold){
-      //std::cout<<"Collision inelastic"<<std::endl;
-      /*i_nuclide = sample_nuclide(p, CType::inelastic);
+      std::cout<<"Collision inelastic"<<std::endl;
+      i_nuclide = sample_nuclide(p, CType::inelastic);
       //Inelastic scattering case
-      auto tmp = non_elastic_scatter(p.E());
+      auto tmp = non_elastic_scatter(i_nuclide, p.E());
       scat_cos2 = tmp.second;
       p.E() = tmp.first; // Updating energy from inelastic collision
-      */
     }else{
       //Elastic scattering case
-      //std::cout<<"Collision elastic"<<std::endl;
+      std::cout<<"Collision elastic"<<std::endl;
       i_nuclide = sample_nuclide(p, CType::elastic);
       scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E());
     }
   }
   //Updating direction from either case
   //scat_cos2 = 1.0;
-  std::cout<<scat_cos2<<std::endl;
+  //std::cout<<scat_cos2<<std::endl;
 
   //TODO now combine the scattering angle with the dir update from BM, assuming a random azimuth for the scattering....
 
   //auto mu = random_angle();
   //Since in this case we _have_ direction I think we can apply this rotate twice
   // Alternately, we could sum the two corrections. 
-  // NOTE: this function takes a random phi if not specified
-  std::cout<<dir.first<<" "<<dir.second<<std::endl;
+ //std::cout<<dir.first<<" "<<dir.second<<std::endl;
   const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
   //Constructing the new direction from spherical BM
   p.u() = {sin_theta * std::cos(dir.second),
          sin_theta * std::sin(dir.second),
          dir.first};
   //p.u() = rotate_angle(p.u(), dir.first, &dir.second, p.current_seed());
+  // NOTE: rotat_angle function picks a random phi if not specified
   p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
   //p.mu() = scat_cos2; // TODO - need to combine the two angles here
   

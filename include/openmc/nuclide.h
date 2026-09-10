@@ -133,6 +133,7 @@ public:
 
   CS_1d proton_ne_rate, proton_el_rate;
   CS_2d proton_el_xsec;
+  CS_3d proton_ne_xsec;
 
 private:
   void create_derived(
