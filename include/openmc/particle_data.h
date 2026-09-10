@@ -239,10 +239,9 @@ struct MacroXS {
   double photon_prod; //!< macroscopic photon production xs
   double loss_rate; //!< per-cm energy loss rate for applicable particles
   double energy_straggling; //!per-cm ??? energy randomisation for applicable particles
-  double inelastic_threshold; //Normalized value, inelastic/total
-  double moliere; //Temporary - multiple scattering partial computation
-  double total_elastic; // Temporary - total elastic rate over all nuclides in current material
-  double total_inelastic; //Temporary - total inelastic rate over all nucs
+  double moliere; // !<Partial calculation - multiple scattering
+  double total_elastic; // !< Total elastic rate over all nuclides in current material
+  double total_inelastic; //!<Total inelastic rate over all nucs
 
   // Photon cross sections
   double coherent;        //!< macroscopic coherent xs

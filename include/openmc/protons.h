@@ -111,10 +111,11 @@ inline double energy_straggling_update_sq(double e){
   //Duplicated from SDE code
   inline double energy_straggling_sd(int i_nuclide) {
 
-    //The micro part is just the sum of x * z / a; and can be cached, electrons per average molecule in this material
+    //The micro part is just the sum of z; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
+    // TODO - rho_i/A_i is the mass fraction? Need to nail this down
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
-    return nuclide.Z_ / nuclide.A_;
+    return nuclide.Z_;
   }
 
   /** @brief Retrieve scattering rate for Rutherford and elastic scattering

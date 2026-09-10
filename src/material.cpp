@@ -834,23 +834,14 @@ void Material::calculate_xs(Particle& p) const
 }
 
 //PROTON_TRANSPORT
-/** @brief Compute proton cross-sections and rates
- * 
- * Computes the total material cross-sections and rates for the processes in the SDE model. This includes rutherford-and-elastic scattering, inelastic scattering, small-angle Moliere scattering, Bethe-Bloch energy loss, and energy straggling. All material dependency is included by this function, and the rates _depend strongly on incident particle energy E_
+/* Computes the total material cross-sections and rates for the processes in the SDE model. This includes rutherford-and-elastic scattering, inelastic scattering, small-angle Moliere scattering, Bethe-Bloch energy loss, and energy straggling. All material dependency is included by this function, and the rates _depend strongly on incident particle energy E_
  */
 void Material::calculate_proton_xs(Particle& p) const
 {
 
-  // Find energy index on energy grid
-  int proton = ParticleType::proton().transport_index();
- 
-  int i_grid =
-    std::log(p.E() / data::energy_min[proton]) / simulation::log_spacing;
-
-  const double log_avogadro = log(6) + 23 * log(10);
+  // Temporaries for material sums
   double total_density = 0.0;
-  double total_inelastic = 0.0;
-  double total_chi_c = 0.0, total_chi_a = 0.0;
+  double total_chi_c_fac = 0.0, total_chi_a_numerator = 0.0;
   // Add contribution from each nuclide in material
   for (int i = 0; i < nuclide_.size(); ++i) {
     // ======================================================================
@@ -860,49 +851,52 @@ void Material::calculate_proton_xs(Particle& p) const
     int i_nuclide = nuclide_[i];
 
     // TODO - use correct value!!!
-    double MEE_material = 70.0/1e6;
+    double MEE_material = 70.0*eVToMeV; // -> MeV
     // Update microscopic cross section for this nuclide
-    //Mean Excitation Energy enters non-linearly into the equation
-    p.update_proton_xs(i_nuclide, i_grid, MEE_material);
+    // Mean Excitation Energy enters non-linearly into the equation per nuclide!!
+    p.update_proton_xs(i_nuclide, MEE_material);
     auto& micro = p.proton_xs(i_nuclide);
-    const double awr = settings::run_CE ? data::nuclides[i_nuclide]->awr_ : 1.0;
+    const double A = settings::run_CE ? data::nuclides[i_nuclide]->A_ : 1.0;
 
-   //Sum over nucleides etc
     // Copy atom density of nuclide in material
     double atom_density = this->atom_density(i, p.density_mult());
 
     // Add contributions to cross sections
+    //Total _true collisional_ cross section
     p.macro_xs().total += atom_density * micro.total;
-    total_inelastic += atom_density * micro.inelastic;
+    // Not used here, but retain summation as it exists
     p.macro_xs().absorption += atom_density * micro.absorption;
-    
-    
-    //Converting from barn to cm and multiplying by density
+
+    //Rates here need to be multiplied by the correct form of the partial density
+    //and converted from barns if neccessary
+    // Total energy loss
     p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
-    //std::cout<<i<<" "<<data::nuclides[i_nuclide]->name_ <<" "<<atom_density / N_AVOGADRO<<std::endl;
 
-    //Energy straggling cached part. 
-    p.macro_xs().energy_straggling += atom_density * awr * micro.energy_straggling;
-    total_density += atom_density * awr;
+    //Energy straggling- summing per-nuclide contribution
+    // THIS IS NOT in barns
+    p.macro_xs().energy_straggling += atom_density * micro.energy_straggling;
+    //
+    total_density += atom_density * A;
 
-    total_chi_c += micro.moliere_precomp.first * atom_density * awr;
-    total_chi_a += micro.moliere_precomp.second * atom_density * awr;
+    //Summing the partial factors for Moliere small-angle scattering
+    // These DO NOT contain the mass_fraction
+    //This sums Z(Z+1)/A, so _part_ of chi_c**2 and the denominator for chi_a**2
+    total_chi_c_fac += micro.moliere_precomp.first;
+    //This sums the numerator for log(chi_a**2)
+    total_chi_a_numerator += micro.moliere_precomp.second;
 
+    // True collisional cross-sections
+    //TODO - Avogadro?
     p.macro_xs().total_elastic += atom_density * micro.elastic;
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
-  p.macro_xs().inelastic_threshold = total_inelastic / p.macro_xs().total;
-  //Adding other material dependent factors - TODO move into a function
+
+  //Adding other material dependent factors - TODO check
   p.macro_xs().energy_straggling /= total_density; // TODO double check this factor
   p.macro_xs().energy_straggling *= (this->density_gpcc()) * exp(log_avogadro); 
-  //std::cout<<"vals "<<p.macro_xs().total<<" "<<p.macro_xs().total_elastic<<" "<<p.macro_xs().total_inelastic<<std::endl;
-  double density = this->density_gpcc();
-  //std::cout<<"Density "<<density<<std::endl;
-  //std::cout<<"loss rate "<< p.macro_xs().loss_rate<<std::endl;
-  // Check this idiom as well - is summing (X * atom_density) then divide by total the same as the mass fraction?
-  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c/total_density, total_chi_a/total_density, density);
 
-  //p.macro_xs().energy_straggling /= total_density; // Multiply by the dnsity in the next bit
+  //This converts from the partial chi calculations into the complete sigma_E including the density
+  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c_fac, total_chi_a_numerator, density_gpcc());
 
 }
 void Material::calculate_neutron_xs(Particle& p) const

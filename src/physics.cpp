@@ -163,7 +163,7 @@ void sample_proton_reaction(Particle&p){
   if(p.transport_distance() > path_to_next_event){
     //We should do one or the other - decide which
     auto ran = next_rand(); //Uniform random - compare with threshold to chose which
-    if(ran < p.macro_xs().inelastic_threshold){
+    if(ran < p.macro_xs().total_inelastic / p.macro_xs().total){
       //Inelastic scattering. Sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::inelastic);
       //Perform the scattering - returns a pair, updated E and cos(angle)
