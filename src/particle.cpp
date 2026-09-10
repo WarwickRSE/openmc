@@ -286,9 +286,9 @@ void Particle::event_advance()
   } else if (macro_xs().total == 0.0) {
     collision_distance() = INFINITY;
   } else {
+    //NOTE : for PROTON_TRANSPORT this is the true next-single-collision distance
     collision_distance() = -std::log(prn(current_seed())) / macro_xs().total;
   }
-  // That line will calculate time to next collision, IF we set total correctly
 
   double speed = this->speed();
   double time_cutoff = settings::time_cutoff[type().transport_index()];
@@ -299,32 +299,38 @@ void Particle::event_advance()
   double distance;
   
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
+    // PROTON_TRANSPORT - calculate the transport_distance - distance to next
+    // evaluation of condensed history step
+    // We cap this based on a maximum_energy_loss, and a range of step lengths
+    // TODO - move these into settings
     // Additional distance caps: pure step len, and energy loss len
-    const double max_step_len = 0.2, min_step_len = 0.05; // TODO - are these cm??
+    // NOTE: in VOID material there are no collisions or energy loss to consider
+    const double max_step_len = 0.2, min_step_len = 0.05;
     const double max_energy_loss = 10000.0; // in eV/cm
+    //Distance based on maximum energy loss, with a lower bound
     const double loss_len = std::max(max_energy_loss/this->macro_xs().loss_rate, min_step_len);
+    // Final distance based on material boundary, distance to next collision, the loss capped distance, and some cutoffs
     transport_distance() = std::min({collision_distance(), max_step_len, loss_len});
     distance = std::min({boundary().distance(), transport_distance(), distance_cutoff});
-    //std::cout<<"Dist "<<distance<<" "<<collision_distance()<<" "<<max_step_len<<" "<<loss_len<< std::endl;
   }else{
     transport_distance() = collision_distance();
     distance = std::min({boundary().distance(), collision_distance(), distance_cutoff});
   }
-  // THIS iS WHERE we know exactly how far to go. So now we need to know the energy loss
-  // to slow the particle down
 
   // Advance particle in space and time
   this->move_distance(distance);
   
-  double E_before = E();
+  // PROTON_TRANSPORT
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
-    double energyLossPer = this->macro_xs().loss_rate;
-    //std::cout<<E()<<" "<<energyLossPer<<" "<<energyLossPer*distance << std::endl;
-    //std::cout<<
-    //Form the total energy correction Zeta2 - this is in MeV so factor 1e6
-    double energyStraggle = std::sqrt(this->macro_xs().energy_straggling * energy_straggling_update_sq(E()) * distance) * random_straggle()*1e6;
-    //std::cout<<energyLossPer<<" "<<E()<<" "<<energyStraggle<< std::endl;
 
+    // Small-angle scattering - updates p.u()
+    proton_small_angle_scatter(*this);
+
+    // Energy loss in eV per cm
+    double energyLossPer = this->macro_xs().loss_rate;
+    // Energy straggling total correction (note ± eV)
+    double energyStraggle = proton_energy_straggle(*this, distance);
+    //Update the energy - subtract the loss, and the straggling. Cap energy so it cannot go -ve
     E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
   }
  

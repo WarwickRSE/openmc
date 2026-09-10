@@ -108,13 +108,20 @@ void collision(Particle& p)
 }
 
 // PROTON_TRANSPORT
-/** Sample a single collision-like event for given particle
- *
- * This evaluates the spherical Brownian motion causes by many small collisions and also adds (rare but possible) elastic or inelastic collision effects if one should occur. This routine potentially updates the direction and energy of the particle.
+
+/** Proton energy straggling calculatation
  * 
- * Any secondary emissions would be added here if such an extension were considered
+ * Calculates the energy straggling effect for the current particle, Zeta2 in paper. Multiply the summed per-nuclide contributions with an energy dependent prefactor. Distance is then multiplied in. Finally, we add a random Gaussian draw. The factor of 1e6 is because the calculation is in MeV and we want eV to match the calling code
+ */
+double proton_energy_straggle(const Particle & p, double distance){
+    return std::sqrt(p.macro_xs().energy_straggling * energy_straggling_update_sq(p.E()) * distance) * random_straggle() * 1e6;
+}
+
+/** Calculate small angle scattering
+ * 
+ * Evaluates the integrated small angle scattering during the initial transport phase.
 */
-void sample_proton_reaction(Particle&p){
+void proton_small_angle_scatter(Particle &p){
 
   //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
 
@@ -123,7 +130,27 @@ void sample_proton_reaction(Particle&p){
   std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
   auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
 
-  //Now tackle large-angle collisions
+  //Constructing new direction after spherical BM
+  const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
+  p.u() = {sin_theta * std::cos(dir.second),
+         sin_theta * std::sin(dir.second),
+         dir.first};
+  //Calculate the 'mu' from this part
+  p.mu() = p.u_last().dot(p.u());
+
+}
+
+/** Sample a single collision-like event for given particle
+ *
+ * This applies ONLY the (rare) elastic or inelastic collision effects if one should occur. This routine potentially updates the direction and energy of the particle.
+ * 
+ * Any secondary emissions would be added here if such an extension were considered
+*/
+void sample_proton_reaction(Particle&p){
+
+  //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
+
+  //Tackle large-angle single collisions
   //This will be the cosine of the polar scattering angle. It is NOT relative to the current direction, it is a rotation. We will sample a corresponding phi below
   double scat_cos2 = 1.0;
   //Decide if it was elastic or inelastic.
@@ -133,8 +160,7 @@ void sample_proton_reaction(Particle&p){
 
   //Deciding whether to do an elastic, inelastic or neither, based on the MFP for each type and the transport_distance
   double path_to_next_event = random_exp(p.macro_xs().total);
-  bool do_scatter = p.transport_distance() > path_to_next_event;
-  if(do_scatter){
+  if(p.transport_distance() > path_to_next_event){
     //We should do one or the other - decide which
     auto ran = next_rand(); //Uniform random - compare with threshold to chose which
     if(ran < p.macro_xs().inelastic_threshold){
@@ -152,31 +178,15 @@ void sample_proton_reaction(Particle&p){
       //Calculate scattering angle
       scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E());
     }
-  }
-
-  // Save the pre-collision direction so we can recover the overall polar
-  // scattering angle (mu) once the new direction has been constructed
-  Direction u_old = p.u();
-
-  //Constructing new direction after spherical BM
-  const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
-  p.u() = {sin_theta * std::cos(dir.second),
-         sin_theta * std::sin(dir.second),
-         dir.first};
-  if(do_scatter){
-    // Applying large angle scatter
+    // Now Applying large angle scatter
     // NOTE: rotat_angle function picks a random phi for us if not specified
     p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
+    p.mu() = p.u_last().dot(p.u()); // Effectively adds this rotation to the small-angle one
   }
 
-  // Overall cosine of the scattering angle in the LAB frame, combining both
-  // the spherical Brownian motion and any large-angle scatter
-  // C.f. scatter for neutrons
-  p.mu() = u_old.dot(p.u());
-
-  //Storing other information about what happened
+  //Storing other information about what happened here
   p.event_nuclide() = i_nuclide;
-  p.event() = TallyEvent::SCATTER;
+  p.event() = TallyEvent::SCATTER; //TODO - what about if we did NOT scatter?
 
 }
 

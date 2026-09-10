@@ -99,6 +99,11 @@ void sample_secondary_photons(Particle& p, int i_nuclide);
 //! \param[in] p, particle to be split or rouletted with the weight window.
 void split_particle(Particle& p);
 
+// PROTON_TRANSPORT
+double proton_energy_straggle(const Particle & p, double distance);
+void proton_small_angle_scatter(Particle & p);
+
+
 } // namespace openmc
 
 #endif // OPENMC_PHYSICS_H

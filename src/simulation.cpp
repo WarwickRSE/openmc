@@ -869,6 +869,7 @@ void transport_history_based_single_particle(Particle& p)
       p.event_advance();
     }
     if (p.alive()) {
+      // PROTON_TRANSPORT - decide whether the next update is an event or a material boundary
       if (p.transport_distance() > p.boundary().distance()) {
         p.event_cross_surface();
       } else if (p.alive()) {
