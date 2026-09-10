@@ -832,11 +832,15 @@ void Material::calculate_xs(Particle& p) const
     this->calculate_proton_xs(p);
   }
 }
+
+//PROTON_TRANSPORT
+/** @brief Compute proton cross-sections and rates
+ * 
+ * Computes the total material cross-sections and rates for the processes in the SDE model. This includes rutherford-and-elastic scattering, inelastic scattering, small-angle Moliere scattering, Bethe-Bloch energy loss, and energy straggling. All material dependency is included by this function, and the rates _depend strongly on incident particle energy E_
+ */
 void Material::calculate_proton_xs(Particle& p) const
 {
-  // ------- Duplicated from Neutrons w. adjustments
 
-  const double barn2Avo = 1.66054; // TODO CHECKKKKK!!!
   // Find energy index on energy grid
   int proton = ParticleType::proton().transport_index();
  

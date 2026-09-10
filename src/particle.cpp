@@ -974,13 +974,12 @@ void Particle::write_restart() const
   } // #pragma omp critical
 }
 
-// TODO - does this caching make sense or should we just recalculate regardless?
-void Particle::update_proton_xs(int i_nuclide, int i_grid, double MEE_material)
+void Particle::update_proton_xs(int i_nuclide, double MEE_material)
 {
   
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {
-    micro.absorption = 0.0; // What should this be?
+    micro.absorption = 0.0;
     micro.last_E = E();
     micro.loss_rate = proton_bethe_bloch(i_nuclide, E(), MEE_material);
     micro.energy_straggling = energy_straggling_sd(i_nuclide);

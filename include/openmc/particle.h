@@ -114,11 +114,12 @@ public:
   //! create a particle restart HDF5 file
   void write_restart() const;
 
-  //! Update microscopic cross section cache
-  //
+  //! Update microscopic cross section and rate
+  //!
+  //! Computes and stores partial factors per nuclide for the processes involved in the proton SDE model. These will by summed to form per-material rates and sections later. NOTE: in some places this requires computing partial factors which need further computation to evaluate. See material.cpp, physics.cpp and protons.cpp for this
   //! \param[in] i_nuclide Index in data::nuclides
-  //! \param[in] i_grid Index on log union grid
-  void update_proton_xs(int i_nuclide, int i_grid, double MEE_material);
+  //! \param[in] MEE_material Mean-Excitation-Energy for the material in MeV
+  void update_proton_xs(int i_nuclide, double MEE_material);
 
   //! Update microscopic cross section cache
   //

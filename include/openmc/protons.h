@@ -20,7 +20,7 @@ constexpr double eVToMeV = 1e-6;
 constexpr double alpha_finestruc = 1.0/137.0;
 constexpr double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
 constexpr double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-constexpr double log_hbar = -21 * log(10) + log(4.136) - log(2 * M_PI); // MeV * s
+constexpr double log_hbar = -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
 constexpr double log_c = log(29979245800);                              // cm / s
 constexpr double log_avogadro = log(6) + 23 * log(10);
  
@@ -62,12 +62,6 @@ inline double random_exp(double lambda){
   std::exponential_distribution<double> generic_exp(lambda);
   return generic_exp(proton_rng);
 }
-
-  inline double dot_product(std::vector<double> a, std::vector<double> b){
-    //Dot product IFF length of a and b is 3
-    double val = a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-    return val;
-  }
 
   /** @brief Calculate BetaSq factor
    * 
@@ -123,6 +117,11 @@ inline double energy_straggling_update_sq(double e){
     return nuclide.Z_ / nuclide.A_;
   }
 
+  /** @brief Retrieve scattering rate for Rutherford and elastic scattering
+   * 
+   * @param e energy of particle being scattered in eV
+   * @return  scattering rate sigma_e 
+   */
   inline double non_elastic_rate(int i_nuclide, double e){
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     return nuclide.proton_ne_rate.evaluate(e*eVToMeV);
@@ -138,22 +137,40 @@ inline double energy_straggling_update_sq(double e){
     return nuclide.proton_el_rate.evaluate(e*eVToMeV);
   }
 
+  /**
+   * @brief Computes the partial nuclide dependent factors in moliere scattering
+   * 
+   * Effectively computes chi_c and chi_a from pages 7 and 8 of [1] for a single species.
+   * NOTE: the return here is not strictly chi_c**2, only the per-nuclide part. We multiply in the other factors in moliere_transform. However this factor is the correct one for computing log(chi_a**2) from page 8 of [1]. 
+   * @param i_nuclide The nuclide to compute for
+   * @param e The energy of the incident proton in eV
+   * @return A pair, consisting of chi_c**2, and chi_c**2 * log(chi_a**2)
+   */
   inline std::pair<double, double> moliere_scattering_precomp(int i_nuclide, double e){
     auto energy = e*eVToMeV;
     auto beta_sq = betaSq(e);
     auto pv_sq = pvSq(e);
 
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
-    // chi_c_sq is sum of individual contributions from each nuclide, 
-    // chi_a_sq is a weighted average on a log scale
-    // HERE we only calculate the per-nuclide part
-    //! Z_i(Z_i+1)/A_i
+    // Nuclide dependent factor part 1
     auto temp1 = nuclide.Z_ * (nuclide.Z_ + 1.0)/nuclide.A_;
-        //chi_c_sq = chi_c_sq + temp1
-        //! (chi_alpha,i)^2, note pv_sq = (p * beta)^2
+    //chi_a**2 for single Nuclide
     auto temp2 = 2.007E-5 * std::pow(nuclide.Z_, 2.0/3.0) * (1.0 + 3.34 * std::pow(nuclide.Z_ * alpha_finestruc, 2)/beta_sq) * beta_sq / pv_sq;
     return {temp1, temp1 * log(temp2)};
   }
+
+  /** @brief Moliere's small angle elastic
+   * 
+   * See P 7 and 8 of [1]
+   * chi_c and chi_a and omega are partial factors which are not named.
+   * 0.98 is a truncation parameter F and is fixed here
+   * This computes the answer for a small fixed spatial step. The actual distance must be multiplied in later
+   * @param energy energy of particle being scattered in eV
+   * @param sum_c first part of partial calculation
+   * @param sum_a second part of partial calculation
+   * @param density density of the material
+   * @return squared std-deviation sigma-E for this process for a FIXED distance, fixed_step
+  */
   inline double moliere_transform(double energy, double sum_c, double sum_a, double density){
     auto chi_a_sq = exp(sum_a/sum_c);
     energy = energy * eVToMeV;
@@ -287,7 +304,6 @@ inline double energy_straggling_update_sq(double e){
       auto direction_out_2 = atan2(w[1], w[0]);
 
       //TODO either actualyl Fake direction in, and skip the extra checks OR pass the real direction and update it
-      //direction_out_1 = dot_product(direction_in,w)/sqrt(dot_product(w,w));
       //! might not need the denominator if w unity vector
       return{cos(direction_out_1), direction_out_2};
   }
