@@ -107,75 +107,74 @@ void collision(Particle& p)
   }
 }
 
+// PROTON_TRANSPORT
+/** Sample a single collision-like event for given particle
+ *
+ * This evaluates the spherical Brownian motion causes by many small collisions and also adds (rare but possible) elastic or inelastic collision effects if one should occur. This routine potentially updates the direction and energy of the particle.
+ * 
+ * Any secondary emissions would be added here if such an extension were considered
+*/
 void sample_proton_reaction(Particle&p){
-  // This WILL eventually sample a proton reaction under the SDE model
-  // Very much a WIP
-  // EFFECTS needed overall:
-  // Small angle scattering (HERE)
-  // Energy loss (applied in event_advance)
-  // LARGE angle scattering (probably event advance OR diceroll choice here)
 
-  // TODO IMPORTANT - are we calculating the rates for every nuclide and then only using one?? - NO, we need all in order to eval the totals...
+  //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
 
-
-  //IGNORE potential for fission , and secondary emissions
-
-  //Neutrons effects are in several functions, scatter etc. Just do this here for now
-
-  //Decide if it was elastic or inelastic.
-  auto ran = next_rand();
-  // Can we use transport_distance() here?? I _think_ so...
-  // TODO - since we have the initial direction, should we pass that properly here?
-  // Should we update it internal to the function, or apply rotate_angle below?
-  //std::vector<double> direction_in{1.0, 0.0, 0.0};
+  //Applying Spherical brownian motion. The result of this is the NEW direction in spherical polar co-ordinates
+  //Start from the current direction
   std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
   auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
-  double scat_cos2 = 1.0;
-  
-  // Sample a nuclide within the material (uses proton x-section internally)
-  int i_nuclide = 0;// = sample_nuclide(p);
-  // Will Save which nuclide particle had collision with
 
-  //Deciding whether to do an elastic, inelastic or neither
+  //Now tackle large-angle collisions
+  //This will be the cosine of the polar scattering angle. It is NOT relative to the current direction, it is a rotation. We will sample a corresponding phi below
+  double scat_cos2 = 1.0;
+  //Decide if it was elastic or inelastic.
+ 
+  //This will be the index of the nuclide to collide with. Note that the partial cross-sections are different in the two cases.
+  int i_nuclide = 0;
+
+  //Deciding whether to do an elastic, inelastic or neither, based on the MFP for each type and the transport_distance
   double path_to_next_event = random_exp(p.macro_xs().total);
-  //std::cout<<"Choosing "<<ran<<" "<<p.macro_xs().inelastic_threshold<<std::endl;
-  //std::cout<<path_to_next_event<<std::endl;
-  if(p.transport_distance() > path_to_next_event){
+  bool do_scatter = p.transport_distance() > path_to_next_event;
+  if(do_scatter){
+    //We should do one or the other - decide which
+    auto ran = next_rand(); //Uniform random - compare with threshold to chose which
     if(ran < p.macro_xs().inelastic_threshold){
-      std::cout<<"Collision inelastic"<<std::endl;
+      //Inelastic scattering. Sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::inelastic);
-      //Inelastic scattering case
+      //Perform the scattering - returns a pair, updated E and cos(angle)
       auto tmp = non_elastic_scatter(i_nuclide, p.E());
+      //Cosine angle to apply below
       scat_cos2 = tmp.second;
-      p.E() = tmp.first; // Updating energy from inelastic collision
+      //Updated energy
+      p.E() = tmp.first;
     }else{
-      //Elastic scattering case
-      std::cout<<"Collision elastic"<<std::endl;
+      //Elastic scattering case - sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::elastic);
+      //Calculate scattering angle
       scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E());
     }
   }
-  //Updating direction from either case
-  //scat_cos2 = 1.0;
-  //std::cout<<scat_cos2<<std::endl;
 
-  //TODO now combine the scattering angle with the dir update from BM, assuming a random azimuth for the scattering....
+  // Save the pre-collision direction so we can recover the overall polar
+  // scattering angle (mu) once the new direction has been constructed
+  Direction u_old = p.u();
 
-  //auto mu = random_angle();
-  //Since in this case we _have_ direction I think we can apply this rotate twice
-  // Alternately, we could sum the two corrections. 
- //std::cout<<dir.first<<" "<<dir.second<<std::endl;
+  //Constructing new direction after spherical BM
   const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
-  //Constructing the new direction from spherical BM
   p.u() = {sin_theta * std::cos(dir.second),
          sin_theta * std::sin(dir.second),
          dir.first};
-  //p.u() = rotate_angle(p.u(), dir.first, &dir.second, p.current_seed());
-  // NOTE: rotat_angle function picks a random phi if not specified
-  p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
-  //p.mu() = scat_cos2; // TODO - need to combine the two angles here
-  
-  //Storing stuff about what happened
+  if(do_scatter){
+    // Applying large angle scatter
+    // NOTE: rotat_angle function picks a random phi for us if not specified
+    p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
+  }
+
+  // Overall cosine of the scattering angle in the LAB frame, combining both
+  // the spherical Brownian motion and any large-angle scatter
+  // C.f. scatter for neutrons
+  p.mu() = u_old.dot(p.u());
+
+  //Storing other information about what happened
   p.event_nuclide() = i_nuclide;
   p.event() = TallyEvent::SCATTER;
 
