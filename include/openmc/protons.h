@@ -6,17 +6,24 @@
 #include <stdexcept>
 #include <unordered_map>
 //TODO - what RNG to use?? NOT a file local static one pls!!
+// At that point also move the distribs into the relavant functions
 
 #include "openmc/nuclide.h"
-using Nuclide_t = openmc::Nuclide;
-//#include "fake_nuclide.h"
-
 #include "openmc/proton_cross_sections.h"
 
 namespace openmc{
 static inline std::mt19937 proton_rng {std::random_device {}()};
 constexpr double MAX_DEFLECTION = 1.0e-2; // radians
 constexpr double fixed_step = 0.05; // A fixed step length used in temporary calc
+constexpr double MeVToeV = 1e6;
+constexpr double eVToMeV = 1e-6;
+constexpr double alpha_finestruc = 1.0/137.0;
+constexpr double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
+constexpr double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
+constexpr double log_hbar = -21 * log(10) + log(4.136) - log(2 * M_PI); // MeV * s
+constexpr double log_c = log(29979245800);                              // cm / s
+constexpr double log_avogadro = log(6) + 23 * log(10);
+ 
 
 static inline std::uniform_real_distribution<double> uniform_dist {0.0, 1.0};
 static inline std::uniform_real_distribution<double> angle_dist {std::cos(MAX_DEFLECTION), 1.0};
@@ -50,14 +57,6 @@ inline double log_pochhammer(double a, double x){
 inline double next_rand(){
   return uniform_dist(proton_rng);
 }
-inline double mock_random_value(){
-    double sample = uniform_dist(proton_rng) * 0.1/0.000668456;
-    return sample;
-}
-
-inline double random_angle(){
-  return angle_dist(proton_rng);
-}
 
 inline double random_exp(double lambda){
   std::exponential_distribution<double> generic_exp(lambda);
@@ -70,153 +69,81 @@ inline double random_exp(double lambda){
     return val;
   }
 
+  /** @brief Calculate BetaSq factor
+   * 
+   * Used by many of the calculations, See Eq (3), p 6 of [1].
+   * @param E Energy in MeV
+   */
+  inline constexpr double betaSq(double E){return (2.0 * mpcsq + E) * E / pow(mpcsq + E, 2);}
+  /**
+   * @brief Calculate pv_sq
+   * 
+   * This is (p*beta)**2
+   * @param E Energy in MeV
+   */
+  inline constexpr double pvSq(double E){auto tmp = (2.0 * mpcsq + E) * E / (mpcsq + E); return tmp * tmp;}
 
 /** @brief Inelastic energy loss
  * 
  * Computes the inelastic energy loss per cm using bethe-bloch formula
- * As CURRENTLY implemented this is for a single nuclide in a combined material - the averaged mean-excitation-energy is smuggled in as I and enters non-linearly
+ * This is for a single nuclide and is per density. Multiply by density to get an energy loss in eV/cm
  * 
  * @param i_nuclide The index for this nuclide in the global table
- * @param E Initial Energy of the proton in ?????
- * @param I Mean activation energy for current material in ?????
+ * @param E Initial Energy of the proton in eV
+ * @param I Mean activation energy for current material in MeV // TODO pass as eV
  */
 inline double proton_bethe_bloch(int i_nuclide, double E, double I){
-
-    //Access the material base properties from the data table
-    //const Nuclide_t& nuclide = *nuclide_list.at(i_nuclide);
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    // Betht-bloch contrib for single atom of THIS Nuclide only, summed later
-    double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
-    double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-    E = E / 1e6; // Inside here, expecting MeV
-    double betasq = (2 * mpcsq + E) * E / pow(mpcsq + E, 2);
-    return 1e6 * 0.3072 * nuclide.Z_ *
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    // Bethe-bloch contrib for single atom of THIS Nuclide only, summed later
+    E = E * eVToMeV; // Inside here, expecting MeV
+    double betasq = betaSq(E);
+    return MeVToeV * 0.3072 * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
-             (betasq); ///??? In what units??
-        //TODO divides by A_ only to multiply by it later??
+             (betasq);
 }
 
 inline double random_straggle(){
-  const double arbitrary_scale = 1;
-  return arbitrary_scale * e_strag(proton_rng);
+  return e_strag(proton_rng);
 }
+
 //Random bump - Energy loss or gain due to straggling. Depends on e and material
 // and introduced a random Gaussian
 inline double energy_straggling_update_sq(double e){
-    double alpha = 1 / 137.0;
-    double log_hbar = -21 * log(10) + log(4.136) - log(2 * M_PI); // MeV * s
-    double log_c = log(29979245800);                              // cm / s
-    double log_avogadro = log(6) + 23 * log(10);
-    double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-    e = e/1e6;
-    double betasq = (2 * mpcsq + e) * e / pow(mpcsq + e, 2);
-    //double log_molecule_density =
-        //log(density) + log_avogadro; // molecules / cm^3
-    double ret =
-        4 * PI * (1 - betasq / 2) / (1 - betasq) *
-        exp(2 * (log(alpha) + log_hbar + log_c));
-    return ret;
+    e = e*eVToMeV;
+    double betasq = betaSq(e);
+    return 4 * PI * (1 - betasq / 2) / (1 - betasq) *
+        exp(2 * (log(alpha_finestruc) + log_hbar + log_c));
 }
   //Duplicated from SDE code
   inline double energy_straggling_sd(int i_nuclide) {
 
     //The micro part is just the sum of x * z / a; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     return nuclide.Z_ / nuclide.A_;
   }
 
   inline double non_elastic_rate(int i_nuclide, double e){
-    //double log_avogadro = log(6) + 23 * log(10);
-    //double log_barns_to_cmsq = -24 * log(10);
-    //double ret = 0;
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    return nuclide.proton_ne_rate.evaluate(e/1e6);
-    //TODO URGENT units
-    /*for (unsigned int i = 0; i < at.size(); i++) {
-      ret += x[i] * at[i].ne_rate.evaluate(e) / at[i].a;
-    }
-    double log_molecule_density =
-        log(density) + log_avogadro; // molecules / cm^3
-    //ret *= exp(log_barns_to_cmsq + log_molecule_density);
-    return ret; // rate per cm*/
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    return nuclide.proton_ne_rate.evaluate(e*eVToMeV);
   }
 
+   /** @brief Retrieve scattering rate for Rutherford and elastic scattering
+   * 
+   * @param e energy of particle being scattered in eV
+   * @return  scattering rate sigma_e 
+   */
   inline double rutherford_elastic_rate(int i_nuclide, double e){
-    /*double log_avogadro = log(6) + 23 * log(10);
-    double log_barns_to_cmsq = -24 * log(10);
-    double ret = 0;
-    for (unsigned int i = 0; i < at.size(); i++) {
-      ret += x[i] * at[i].el_ruth_rate.evaluate(e) / at[i].a;
-    }
-    double log_molecule_density =
-        log(density) + log_avogadro; // molecules / cm^3
-    ret *= exp(log_barns_to_cmsq + log_molecule_density);
-    return ret; // rate per cm*/
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    const double arbitrary_factor = 1;
-    return nuclide.proton_el_rate.evaluate(e/1e6);// / nuclide.A_;
-    //return 1e4;
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    return nuclide.proton_el_rate.evaluate(e*eVToMeV);
   }
 
-  /* Fortran re-design
-    !> \brief Computes the standard deviation of Moliere scattering
-    !> Based on p. 7 and 8 of [1]
-    !> References:
-    !>  [1] https://doi.org/10.1088/1361-6560/ae5586
-    !> \param material The material through which the proton travels
-    !> \param energy The energy of the proton
-    !> \param time_step The time step for the simulation
-    !> \return The standard deviation of Moliere scattering
-    PURE FUNCTION moliere_scattering_sd(material, energy, time_step) RESULT(sd)
-      TYPE(pt_material), INTENT(IN) :: material
-      REAL(KIND=REAL64), INTENT(IN) :: energy, time_step
-      REAL(KIND=REAL64), PARAMETER :: fixed_time_step = 0.05
-      REAL(KIND=REAL64) :: chi_a_sq, chi_c_sq, pv_sq, beta_sq, sd, omega, temp1, temp2
-      INTEGER :: i
-
-      ! beta^2 see underneath eq. (3) on p. 6 of [1]
-      beta_sq = (2.0 * mpcsq + energy) * energy /(mpcsq + energy)**2
-
-      ! (p*beta)^2
-      pv_sq = (2.0 * mpcsq + energy) * energy / (mpcsq + energy)
-      pv_sq = pv_sq**2
-
-      chi_c_sq = 0.0_REAL64
-      chi_a_sq = 0.0_REAL64
-      ! chi_c_sq is sum of individual contributions from each nuclide, 
-      ! chi_a_sq is a weighted average on a log scale
-      DO i = 1, material%no_nucs
-        ! Z_i(Z_i+1)/A_i
-        temp1 = material%nucs(i)%massFraction * material%nucs(i)%Z * (material%nucs(i)%Z + 1.0_REAL64) / material%nucs(i)%A
-        chi_c_sq = chi_c_sq + temp1
-        ! (chi_alpha,i)^2, note pv_sq = (p * beta)^2
-        temp2 = 2.007E-5_REAL64 * REAL(material%nucs(i)%Z, KIND=REAL64)**(2.0/3.0) * &
-          (1.0_REAL64 + 3.34_REAL64 * (material%nucs(i)%Z * alpha)**2 / beta_sq) * beta_sq / pv_sq
-        chi_a_sq = chi_a_sq + temp1 * LOG(temp2)
-      END DO
-      ! normalise and eliminate the log, 
-      ! note denominator in log(chi_a_sq) same as chi_c_sq before multiplying by nucleide independent parameters
-      chi_a_sq = EXP(chi_a_sq / chi_c_sq)
-      ! multiply chi_c_sq by time_step and and parameters independent of the individual nucleides
-      chi_c_sq = chi_c_sq * 0.157_REAL64 * fixed_time_step * material%density / pv_sq
-      omega = chi_c_sq / (chi_a_sq * 2.0_REAL64 * (1.0_REAL64 - 0.98_REAL64)) ! 0.98 - truncation parameter, see p. 8 [1]
-      ! standard deviation
-      sd = SQRT(time_step/fixed_time_step * chi_c_sq * ((1.0_REAL64 + omega) * LOG(1.0_REAL64 + omega) / omega - 1.0_REAL64) / (1.0_REAL64 + 0.98_REAL64**2))
-    END FUNCTION
-    */
   inline std::pair<double, double> moliere_scattering_precomp(int i_nuclide, double e){
-    auto energy = e/1e6; // Converting to MeV
-    const double alpha = 1.0/137.0;
-    const double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-    // beta^2 see underneath eq. (3) on p. 6 of [1]
-    auto beta_sq = (2.0 * mpcsq + energy) * energy / std::pow(mpcsq + energy, 2);
+    auto energy = e*eVToMeV;
+    auto beta_sq = betaSq(e);
+    auto pv_sq = pvSq(e);
 
-    // (p*beta)^2
-    auto pv_sq = (2.0 * mpcsq + energy) * energy / (mpcsq + energy);
-    pv_sq = pv_sq * pv_sq;
-
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     // chi_c_sq is sum of individual contributions from each nuclide, 
     // chi_a_sq is a weighted average on a log scale
     // HERE we only calculate the per-nuclide part
@@ -224,31 +151,17 @@ inline double energy_straggling_update_sq(double e){
     auto temp1 = nuclide.Z_ * (nuclide.Z_ + 1.0)/nuclide.A_;
         //chi_c_sq = chi_c_sq + temp1
         //! (chi_alpha,i)^2, note pv_sq = (p * beta)^2
-    auto temp2 = 2.007E-5 * std::pow(nuclide.Z_, 2.0/3.0) * (1.0 + 3.34 * std::pow(nuclide.Z_ * alpha, 2)/beta_sq) * beta_sq / pv_sq;
+    auto temp2 = 2.007E-5 * std::pow(nuclide.Z_, 2.0/3.0) * (1.0 + 3.34 * std::pow(nuclide.Z_ * alpha_finestruc, 2)/beta_sq) * beta_sq / pv_sq;
     return {temp1, temp1 * log(temp2)};
   }
   inline double moliere_transform(double energy, double sum_c, double sum_a, double density){
     auto chi_a_sq = exp(sum_a/sum_c);
-    energy = energy / 1e6;
-    const double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-    auto pv_sq = (2.0 * mpcsq + energy) * energy / (mpcsq + energy);
-    pv_sq = pv_sq * pv_sq;
+    energy = energy * eVToMeV;
+    auto pv_sq = pvSq(energy);
     auto chi_c_sq = sum_c * 0.157 * fixed_step * density / pv_sq;
     auto omega = chi_c_sq / (chi_a_sq * 2.0 * (1.0 - 0.98)); // 0.98
-    double result =  chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2));
-    return result;
+    return chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2));
   }
-    /*
-    ! normalise and eliminate the log, 
-      ! note denominator in log(chi_a_sq) same as chi_c_sq before multiplying by nucleide independent parameters
-      chi_a_sq = EXP(chi_a_sq / chi_c_sq)
-      ! multiply chi_c_sq by time_step and and parameters independent of the individual nucleides
-      chi_c_sq = chi_c_sq * 0.157_REAL64 * fixed_time_step * material%density / pv_sq
-      omega = chi_c_sq / (chi_a_sq * 2.0_REAL64 * (1.0_REAL64 - 0.98_REAL64)) ! 0.98 - truncation parameter, see p. 8 [1]
-      ! standard deviation
-      sd = SQRT(time_step/fixed_time_step * chi_c_sq * ((1.0_REAL64 + omega) * LOG(1.0_REAL64 + omega) / omega - 1.0_REAL64) / (1.0_REAL64 + 0.98_REAL64**2))
-      */
-
 
   //From the test code
 
@@ -338,66 +251,11 @@ inline double energy_straggling_update_sq(double e){
   }
 
   inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_transformed_precomp){
-    /* Re-translated from the Fortran decisions
-    !> \brief Simulation of the spherical Brownian motion process
-    !> Based on Algorithm 1 in [2] 
-    !> References:
-    !>  [1] https://doi.org/10.1088/1361-6560/ae5586
-    !>  [2] https://doi.org/10.1016/j.spl.2020.108836
-    !> \param dt The time step for the simulation
-    !> \param energy The energy of the proton
-    !> \param material The material through which the proton travels
-    !> \param direction_in The current direction of the proton in spherical coordinates
-    !> \param state The state of the random number generator
-    !> \param b_state The state of the Box-Muller random number generator
-    !> \return The new direction of the proton in spherical coordinates
-    FUNCTION spherical_bm(dt, energy, material, direction_in) RESULT(direction_out)
-      REAL(KIND=REAL64), INTENT(IN) :: dt, energy, direction_in(3)
-      TYPE(pt_material), INTENT(IN) :: material
-      TYPE(BoxMullerRNGState) :: b_state
-      REAL(KIND=REAL64) :: direction_out(2),z(3), u(3), w(3), y, denom, theta
-      REAL,EXTERNAL :: random
-
-      b_state%has_cache = .false.
-      ! Convert to Cartesian coordinates
-      !z(1) = sin(direction_in(1)) * cos(direction_in(2))
-      !z(2) = sin(direction_in(1)) * sin(direction_in(2))
-      !z(3) = cos(direction_in(1))
-      z=direction_in
-      y = wright_fisher_diffusion(moliere_scattering_sd(material, energy, dt)**2, b_state)
-      theta = 2 * PI * random(1)
-      
-      ! Set up defaults for when z is near (0, 0, 1)
-      u = [1.0_REAL64/SQRT(2.0_REAL64), &
-          1.0_REAL64/SQRT(2.0_REAL64), &
-          0.0_REAL64]
-
-      ! u = (e_3 -z)/|e_3 - z| (line 3, Algorithm 1 [2])
-      denom = SQRT(z(1)**2 + z(2)**2 + (z(3) - 1.0_REAL64)**2)
-      u = -z / denom
-      u(3) = u(3) + 1.0_REAL64/denom
-
-      !Evaluate expression to the right of O(z) in line 4, Algorithm 1 [2]
-      z(1) = 2 * SQRT(y * (1.0_REAL64 - y)) * cos(theta)
-      z(2) = 2 * SQRT(y * (1.0_REAL64 - y)) * sin(theta)
-      z(3) = 1.0_REAL64 - 2 * y
-
-      ! Evaluate O(z)z with O(z)=I-2uu^T (line 3/4 Algorithm 1 [2])
-      w = z - 2 * u * (DOT_PRODUCT(u, z))
-      
-      ! New direction in spherical coordinates
-      direction_out(1) = ACOS(w(3))
-      direction_out(2) = ATAN2(w(2), w(1))
-
-      direction_out(1) = dot_product(direction_in,w)/sqrt(dot_product(w,w)) ! might not need the denominator if w unity vector
-
-    END FUNCTION
-    */
     std::vector<double> z, u, w;
     u.resize(3);
     w.resize(3);
 
-    z=direction_in;
+    z = direction_in;
 
     auto moliere_sd_sq = (distance/fixed_step)* moliere_transformed_precomp;
     auto y = wright_fisher_diffusion(moliere_sd_sq);
@@ -428,11 +286,9 @@ inline double energy_straggling_update_sq(double e){
       auto direction_out_1 = acos(w[2]);
       auto direction_out_2 = atan2(w[1], w[0]);
 
-      //std::cout<<direction_out_1<<" "<<direction_out_2<<std::endl;
       //TODO either actualyl Fake direction in, and skip the extra checks OR pass the real direction and update it
       //direction_out_1 = dot_product(direction_in,w)/sqrt(dot_product(w,w));
       //! might not need the denominator if w unity vector
-      //return {0.98, 0.1};
       return{cos(direction_out_1), direction_out_2};
   }
 
@@ -499,7 +355,7 @@ inline double energy_straggling_update_sq(double e){
     filename += sym;
     filename += "_ne_rate.txt";
     std::cout<<filename<<std::endl;
-    Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
+    Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     nuclide.proton_ne_rate = CS_1d(filename);
     nuclide.proton_ne_rate.check();
     // TODO remove double read
@@ -514,23 +370,27 @@ inline double energy_straggling_update_sq(double e){
   }
 
   inline double rutherford_elastic_scatter(int i_nuclide, double e){
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    //std::cout<<"sampling rutherford "<<std::endl;
-    auto alpha = nuclide.proton_el_xsec.sample(e/1e6, next_rand());
-    //std::cout<<"Done sampling "<<std::endl;
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    auto alpha = nuclide.proton_el_xsec.sample(e*eVToMeV, next_rand());
     return cos(alpha); //TODO URGENT cm to lab??
-    //return random_angle(); //TODO actual
-    //Need the 2D cross section here.
   }
 
+  /** Compute separation energies for incident particles (S_a)
+   * S_a as in Section 6.2.3.2 on p. 137 [4]
+   * References:
+   * [4] https://doi.org/10.2172/1425114
+   * @param a Atomic Weight of Nuclide
+   * @param z Atomic Number of Nuclide
+   * @return S_a
+   */
   inline double s(double a, double z) {
-    double a_c = a + 1;
-    double n_c = a - z;
-    double z_c = z + 1;
-    double a_a = a;
-    double n_a = a - z;
-    double z_a = z;
-    double ret = 15.68 * (a_c - a_a) -
+    const double a_c = a + 1;
+    const double n_c = a - z;
+    const double z_c = z + 1;
+    const double a_a = a;
+    const double n_a = a - z;
+    const double z_a = z;
+    return 15.68 * (a_c - a_a) -
                  28.07 * (pow(n_c - z_c, 2) / a_c - pow(n_a - z_a, 2) / a_a) -
                  18.56 * (pow(a_c, 2.0 / 3) - pow(a_a, 2.0 / 3)) +
                  33.22 * (pow(n_c - z_c, 2) / pow(a_c, 4.0 / 3) -
@@ -538,12 +398,24 @@ inline double energy_straggling_update_sq(double e){
                  0.717 * (z_c * z_c / pow(a_c, 1.0 / 3) -
                           z_a * z_a / pow(a_a, 1.0 / 3)) +
                  1.211 * (z_c * z_c / a_c - z_a * z_a / a_a);
-    return ret;
   }
 
-  inline void sample_nonelastic_collision(double a, double z, double &e, double &alpha, double out_rvalue, double out_energy_cm, double u2){
-    //double out_rvalue, out_energy_cm;
-    //ne_energy_angle.sample(e, out_rvalue, out_energy_cm, u);
+   /** Sample from distribution of nonelastic collision
+   * 
+   * Samples an inelastic collision against a specific nuclide, N
+   * References:
+   * [1] https://doi.org/10.1088/1361-6560/ae5586
+   * [4] https://doi.org/10.2172/1425114
+   * @param nuclide The nuclide to collide with, N
+   * @param e Energy of incident proton, will be updated
+   * @param alpha Polar angle of incident proton, will be updated
+   * @param u A uniform random variate in [0,1]
+   * @param u2 A uniform random variate in [0,1]
+   */
+  inline void sample_nonelastic_collision(const openmc::Nuclide & nuclide, double &e, double &alpha, double u, double u2){
+    double out_rvalue, out_energy_cm;
+    double a = nuclide.A_, z = nuclide.Z_;
+    nuclide.proton_ne_xsec.sample(e, out_rvalue, out_energy_cm, u);
     double eps_a = a * e / (a + 1);
     double eps_b = (a + 1) * out_energy_cm / a;
     double e_a = eps_a + s(a, z);
@@ -573,16 +445,20 @@ inline double energy_straggling_update_sq(double e){
     }
   }
 
+  /** @brief Evaluate an inelastic collision event
+   *
+   * Evaluates a single inelastic collision with a single Nuclide for a proton at energy e.
+   * 
+   * @param i_nuclide Index of the nuclide to collide with
+   * @param e Energy of the incident proton in eV
+   * @return A pair, containing the updated energy in eV and the polar scattering angle
+   */
   inline std::pair<double, double> non_elastic_scatter(int i_nuclide, double e){
-    const Nuclide_t& nuclide = *data::nuclides.at(i_nuclide);
-    double beta = 2.0 * PI * next_rand();
-    double out_rvalue, out_energy, alpha;
-    double e_tmp = e/1e6;
-    nuclide.proton_ne_xsec.sample(e_tmp, out_rvalue, out_energy, next_rand());
-    
-    double atomic_wt = nuclide.A_, z=nuclide.Z_;
-    sample_nonelastic_collision(atomic_wt, z, e_tmp, alpha, out_rvalue, out_energy, next_rand());
-    return {e_tmp*1e6, alpha};
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    double alpha;
+    e = e*eVToMeV; // e passed by value so working with a COPY below
+    sample_nonelastic_collision(nuclide, e, alpha, next_rand(), next_rand());
+    return {e*MeVToeV, alpha};
   }
 
 };

@@ -131,7 +131,8 @@ public:
   array<size_t, 902> reaction_index_;      //!< Index of each reaction
   vector<int> index_inelastic_scatter_;
 
-  CS_1d proton_ne_rate, proton_el_rate;
+  // PROTON TRANSPORT
+  CS_1d proton_ne_rate, proton_el_rate; // TODO - share between nuclides??
   CS_2d proton_el_xsec;
   CS_3d proton_ne_xsec;
 
