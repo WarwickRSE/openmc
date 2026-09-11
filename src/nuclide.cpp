@@ -24,6 +24,7 @@
 
 #include <algorithm> // for sort, min_element
 #include <cassert>
+#include <cstdlib> // for getenv
 #include <string> // for to_string, stoi
 
 namespace openmc {
@@ -1143,7 +1144,13 @@ extern "C" int openmc_load_nuclide(const char* name, const double* temps, int n)
       read_multipole_data(i_nuclide);
 
     // Reading additional proton x-sections - TODO - should add something to settings etc??
-    if(true) read_proton_data(i_nuclide, name);
+    if(true){
+      Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+      char* proton_data_path = std::getenv("OPENMC_PROTON_DATA");
+      if (proton_data_path) {
+        read_proton_data(nuclide, proton_data_path, name);
+      }
+    }
 
     // Read elemental data, if necessary
     if (settings::photon_transport) {

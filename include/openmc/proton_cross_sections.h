@@ -1,3 +1,6 @@
+#ifndef __cross_sections__
+#define __cross_sections__
+
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -6,10 +9,9 @@
 #include <string>
 #include <vector>
 
-#ifndef CS
-#define CS
-
 namespace openmc{
+
+class Nuclide;
 
 struct CS_1d {
 
@@ -87,9 +89,6 @@ struct CS_1d {
 
   CS_1d() : energy(), rate() {}
 
-  void check(){
-    std::cerr<<energy.size()<<" "<<rate.size()<<std::endl;
-  }
   double evaluate(const double e) const {
     double ret = 0;
     int r;
@@ -357,8 +356,10 @@ struct CS_2d {
 };
 
 // Reading functions
+//! Convert from an Isotope name to the long-form element name
 std::string letter_to_string(std::string sym);
-void read_proton_data(int i_nuclide, std::string name);
+//! Read the cross sections for specified name, and data file path
+void read_proton_data(Nuclide & nuclide, std::string path, std::string name);
 
 }
 #endif

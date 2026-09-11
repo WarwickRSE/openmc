@@ -43,6 +43,9 @@ class _Config(MutableMapping):
         Path to a depletion chain XML file. Also sets/unsets the
         OPENMC_CHAIN_FILE environment variable. Setting or deleting this
         clears internal decay data caches.
+    proton_data : pathlib.Path
+        Path to a proton data file. Also sets/unsets the
+        OPENMC_PROTON_DATA environment variable.
     resolve_paths : bool
         If True (default), all paths assigned are resolved to absolute
         paths. If False, paths are stored as they are provided.
@@ -51,7 +54,8 @@ class _Config(MutableMapping):
     _PATH_KEYS: Dict[str, str] = {
         'cross_sections': 'OPENMC_CROSS_SECTIONS',
         'mg_cross_sections': 'OPENMC_MG_CROSS_SECTIONS',
-        'chain_file': 'OPENMC_CHAIN_FILE'
+        'chain_file': 'OPENMC_CHAIN_FILE',
+        'proton_data': 'OPENMC_PROTON_DATA'
     }
 
     def __init__(self, data: dict = ()):
@@ -182,9 +186,9 @@ def _default_config(**kwargs) -> _Config:
     """Create a configuration initialized from environment variables.
 
     This function checks for OPENMC_CROSS_SECTIONS, OPENMC_MG_CROSS_SECTIONS,
-    and OPENMC_CHAIN_FILE environment variables. It also has logic to find
-    a chain file within a `cross_sections.xml` file if one is not
-    explicitly set.
+    OPENMC_CHAIN_FILE, and OPENMC_PROTON_DATA environment variables. It also
+    has logic to find a chain file within a `cross_sections.xml` file if one
+    is not explicitly set.
 
     Returns
     -------

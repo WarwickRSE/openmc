@@ -56,26 +56,26 @@ namespace openmc{
     return it->second;
   }
 
-  void read_proton_data(int i_nuclide, std::string name){
+  void read_proton_data(Nuclide & nuclide, std::string path, std::string name){
     //NOTE: reads for EACH isotope afresh. TODO - fix...
-    std::string path = "/media/raid/MathRadData/protons/";
+
+    path += '/';
     std::string filename = path;
     auto pos = name.find_first_of("0123456789");
     //TODO - better....
     auto sym = letter_to_string(name.substr(0, pos));
     filename += sym;
     filename += "_ne_rate.txt";
-    std::cout<<filename<<std::endl;
-    Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    write_message(6, "Reading {} from {} ", name, filename);
     nuclide.proton_ne_rate = CS_1d(filename);
-    nuclide.proton_ne_rate.check();
     // TODO remove double read
+
     filename = path + sym+ "_el_ruth_cross_sec.txt";
-     std::cout<<filename<<std::endl;
+    write_message(6, "Reading {} from {} ", name, filename);
     nuclide.proton_el_rate = CS_1d(filename);
-    nuclide.proton_el_rate.check();
     nuclide.proton_el_xsec = CS_2d(filename, 0.04);
 
+    write_message(6, "Reading {} from {} ", name, filename);
     filename = path + sym+ "_ne_energyangle_cdf.txt";
     nuclide.proton_ne_xsec = CS_3d(filename);
   }
