@@ -18,7 +18,7 @@ water.add_element('O', 1.0)
 water.set_density('g/cm3', 1.0)
 #water.set_density('g/cm3', 0.0006) # Steam
 water.temperature = 300 # K
-water.mean_activation_energy = openmc.proton_data.mean_activation_energy("water", proton_path + "mean_activation_energies.txt") #eV
+water.mean_excitation_energy = openmc.proton_data.mean_excitation_energy("water", proton_path + "mean_excitation_energies.txt") #eV
 
 materials.append(water)
 materials.export_to_xml()
@@ -68,12 +68,12 @@ settings.source = source
 settings.batches = 1
 settings.inactive = 10
 settings.particles = 1000
-settings.verbosity = 10
+settings.verbosity = 7
 
 settings.track = [(1, 1, particle) for particle in range(1, int(settings.particles/10))]
 
 settings.cutoff = {'energy_proton': 2.0e5} #Cutoff energy in eV
-settings.proton_settings = {'max_step_len': 0.2, 'min_step_len':0.05, 'max_energy_loss':1e3}
+settings.proton_settings = {'max_step_len': 0.2, 'min_step_len':0.05, 'max_energy_loss':1e6}
 
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)

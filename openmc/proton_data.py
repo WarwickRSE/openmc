@@ -1,9 +1,9 @@
 from pathlib import Path
 
-def mean_activation_energy(
+def mean_excitation_energy(
 		name: str,
 		filename: str) -> float:
-	"""Return the mean activation energy for a material or nuclide name.
+	"""Return the mean excitation energy for a material or nuclide name.
 
 	Parameters
 	----------
@@ -31,4 +31,4 @@ def mean_activation_energy(
 			if fields[0] == name:
 				return float(fields[1])
 
-	raise KeyError(f"No mean activation energy found for {name!r}")
+	raise KeyError(f"No mean excitation energy found for {name!r}")

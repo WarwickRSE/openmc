@@ -61,9 +61,9 @@ Material::Material(pugi::xml_node node)
     name_ = get_node_value(node, "name");
   }
 
-  //PROTON TRANSPORT - Mean activation energy
-  if (check_for_node(node, "mean_activation_energy")) {
-    mean_activation_energy_ = std::stod(get_node_value(node, "mean_activation_energy"));
+  //PROTON TRANSPORT - Mean excitation energy
+  if (check_for_node(node, "mean_excitation_energy")) {
+    mean_excitation_energy_ = std::stod(get_node_value(node, "mean_excitation_energy"));
   }
 
   if (check_for_node(node, "cfg")) {
@@ -857,7 +857,7 @@ void Material::calculate_proton_xs(Particle& p) const
 
     // Update microscopic cross section for this nuclide
     // Mean Excitation Energy enters non-linearly into the equation per nuclide!!
-    p.update_proton_xs(i_nuclide, mean_activation_energy_);
+    p.update_proton_xs(i_nuclide, mean_excitation_energy_);
     auto& micro = p.proton_xs(i_nuclide);
     const double A = settings::run_CE ? data::nuclides[i_nuclide]->A_ : 1.0;
 
