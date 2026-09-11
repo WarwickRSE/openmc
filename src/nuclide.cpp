@@ -16,6 +16,7 @@
 #include "openmc/thermal.h"
 
 #include "openmc/protons.h"
+#include "openmc/proton_cross_sections.h"
 
 #include <fmt/core.h>
 

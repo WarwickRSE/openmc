@@ -9,6 +9,8 @@
 #ifndef CS
 #define CS
 
+namespace openmc{
+
 struct CS_1d {
 
   CS_1d(const std::string filename) : energy(), rate() {
@@ -354,4 +356,9 @@ struct CS_2d {
   std::vector<std::vector<double>> exit_angle, cdf;
 };
 
+// Reading functions
+std::string letter_to_string(std::string sym);
+void read_proton_data(int i_nuclide, std::string name);
+
+}
 #endif
