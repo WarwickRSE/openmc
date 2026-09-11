@@ -959,4 +959,19 @@ void get_energy_index(
   }
 }
 
+double log_beta_fn(int a_in, int b_in){
+  double a = (double)a_in;
+  double b = (double)b_in;
+  return std::lgamma(a) + std::lgamma(b) - std::lgamma(a+b);
+}
+
+double log_factorial(int n) {
+  return std::lgamma(static_cast<double>(n) + 1.0);
+}
+
+double log_pochhammer(double a, double x){
+    return std::lgamma(a + x) - std::lgamma(a);
+}
+
+
 } // namespace openmc

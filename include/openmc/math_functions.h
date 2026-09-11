@@ -233,5 +233,12 @@ void get_energy_index(
 
 double standard_normal_cdf(double z);
 
+//! Calculate the ln(Beta) for the Beta function
+double log_beta_fn(int a_in, int b_in);
+//! Calculate ln(n!)
+double log_factorial(int n);
+//! Calculate ln((a+x)! -a!) aka the Pochhammer symbol
+double log_pochhammer(double a, double x);
+
 } // namespace openmc
 #endif // OPENMC_MATH_FUNCTIONS_H

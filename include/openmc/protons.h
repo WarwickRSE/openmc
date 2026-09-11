@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "openmc/math_functions.h"
 #include "openmc/nuclide.h"
 #include "openmc/random_dist.h"
 #include "openmc/proton_cross_sections.h"
@@ -21,15 +22,7 @@ const double log_hbar = -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
 const double log_c = log(29979245800);                              // cm / s
 const double log_avogadro = log(6) + 23 * log(10);
 
-
-// IMPORTANT - THIS IS A WIP. A lot of this file is dumb static global state in order to test the MODEL needs before integrating to the codebase proper
 //TODO - move some of this into the Nuclide, Material or Particle classes?
-
-inline double log_beta_fn(int a_in, int b_in){
-  double a = (double)a_in;
-  double b = (double)b_in;
-  return std::lgamma(a) + std::lgamma(b) - std::lgamma(a+b);
-}
 
 inline double sample_beta(int beta, std::uint64_t * seed){
   auto ran = log_beta_fn(1+beta, 1)+log((1.0+beta) * prn(seed));
@@ -38,17 +31,6 @@ inline double sample_beta(int beta, std::uint64_t * seed){
   return ran;
 }
 
-inline double log_factorial(int n) {
-  return std::lgamma(static_cast<double>(n) + 1.0);
-}
-
-inline double log_pochhammer(double a, double x){
-    return std::lgamma(a + x) - std::lgamma(a);
-}
-
-/*inline double next_rand(){
-  return uniform_dist(proton_rng);
-}*/
   /** @brief Calculate BetaSq factor
    * 
    * Used by many of the calculations, See Eq (3), p 6 of [1].
