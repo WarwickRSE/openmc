@@ -857,7 +857,7 @@ void Material::calculate_proton_xs(Particle& p) const
 
     // Update microscopic cross section for this nuclide
     // Mean Excitation Energy enters non-linearly into the equation per nuclide!!
-    p.update_proton_xs(i_nuclide, mean_activation_energy_ *eVToMeV);
+    p.update_proton_xs(i_nuclide, mean_activation_energy_);
     auto& micro = p.proton_xs(i_nuclide);
     const double A = settings::run_CE ? data::nuclides[i_nuclide]->A_ : 1.0;
 

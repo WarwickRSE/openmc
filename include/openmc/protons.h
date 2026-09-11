@@ -45,12 +45,13 @@ const double log_avogadro = log(6) + 23 * log(10);
  * 
  * @param i_nuclide The index for this nuclide in the global table
  * @param E Initial Energy of the proton in eV
- * @param I Mean activation energy for current material in MeV // TODO pass as eV
+ * @param I Mean activation energy for current material in eV
  */
 inline double proton_bethe_bloch(int i_nuclide, double E, double I){
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     // Bethe-bloch contrib for single atom of THIS Nuclide only, summed later
     E = E * eVToMeV; // Inside here, expecting MeV
+    I = I * eVToMeV; // Ditto
     double betasq = betaSq(E);
     return MeVToeV * 0.3072 * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
