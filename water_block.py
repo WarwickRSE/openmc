@@ -4,6 +4,7 @@ import numpy as np
 #Adapted from OpenMC docs
 
 openmc.Materials.cross_sections = '/media/raid/MathRadData/endfb-viii.1-hdf5/cross_sections.xml'
+protons_file = '/media/raid/MathRadData/protons/mean_activation_energies.txt'
 
 # Create materials
 materials = openmc.Materials()
@@ -15,7 +16,7 @@ water.add_element('O', 1.0)
 water.set_density('g/cm3', 1.0)
 #water.set_density('g/cm3', 0.0006) # Steam
 water.temperature = 300 # K
-water.mean_activation_energy = 70 #eV
+water.mean_activation_energy = openmc.proton_data.mean_activation_energy("water", protons_file) #eV
 
 materials.append(water)
 materials.export_to_xml()
