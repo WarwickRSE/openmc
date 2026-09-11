@@ -1143,8 +1143,7 @@ extern "C" int openmc_load_nuclide(const char* name, const double* temps, int n)
     if (settings::temperature_multipole)
       read_multipole_data(i_nuclide);
 
-    // Reading additional proton x-sections - TODO - should add something to settings etc??
-    if(true){
+    if(settings::proton_transport){
       Nuclide& nuclide = *data::nuclides.at(i_nuclide);
       char* proton_data_path = std::getenv("OPENMC_PROTON_DATA");
       if (proton_data_path) {

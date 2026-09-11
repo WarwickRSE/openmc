@@ -62,6 +62,7 @@ bool output_summary {true};
 bool output_tallies {true};
 bool particle_restart_run {false};
 bool photon_transport {false};
+bool proton_transport {true};
 bool atomic_relaxation {true};
 bool reduce_tallies {true};
 bool res_scat_on {false};
@@ -616,6 +617,11 @@ void read_settings_xml(pugi::xml_node root)
       fatal_error("Photon transport is not currently supported in "
                   "multigroup mode");
     }
+  }
+
+  // Check for proton transport
+  if (check_for_node(root, "proton_transport")) {
+    proton_transport = get_node_value_bool(root, "proton_transport");
   }
 
   // Check for atomic relaxation

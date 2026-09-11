@@ -183,6 +183,8 @@ class Settings:
         Number of particles per generation
     photon_transport : bool
         Whether to use photon transport.
+    proton_transport : bool
+        Whether to use proton transport.
     plot_seed : int
        Initial seed for randomly generated plot colors.
     ptables : bool
@@ -421,6 +423,7 @@ class Settings:
         self._confidence_intervals = None
         self._electron_treatment = None
         self._photon_transport = None
+        self._proton_transport = None
         self._atomic_relaxation = None
         self._plot_seed = None
         self._ptables = None
@@ -711,6 +714,15 @@ class Settings:
     def photon_transport(self, photon_transport: bool):
         cv.check_type('photon transport', photon_transport, bool)
         self._photon_transport = photon_transport
+
+    @property
+    def proton_transport(self) -> bool:
+        return self._proton_transport
+
+    @proton_transport.setter
+    def proton_transport(self, proton_transport: bool):
+        cv.check_type('proton transport', proton_transport, bool)
+        self._proton_transport = proton_transport
 
     @property
     def uniform_source_sampling(self) -> bool:
@@ -1701,6 +1713,11 @@ class Settings:
             element = ET.SubElement(root, "photon_transport")
             element.text = str(self._photon_transport).lower()
 
+    def _create_proton_transport_subelement(self, root):
+        if self._proton_transport is not None:
+            element = ET.SubElement(root, "proton_transport")
+            element.text = str(self._proton_transport).lower()
+
     def _create_plot_seed_subelement(self, root):
         if self._plot_seed is not None:
             element = ET.SubElement(root, "plot_seed")
@@ -2238,6 +2255,11 @@ class Settings:
         if text is not None:
             self.photon_transport = text in ('true', '1')
 
+    def _proton_transport_from_xml_element(self, root):
+        text = get_text(root, 'proton_transport')
+        if text is not None:
+            self.proton_transport = text in ('true', '1')
+
     def _uniform_source_sampling_from_xml_element(self, root):
         text = get_text(root, 'uniform_source_sampling')
         if text is not None:
@@ -2593,6 +2615,7 @@ class Settings:
         self._create_energy_mode_subelement(element)
         self._create_max_order_subelement(element)
         self._create_photon_transport_subelement(element)
+        self._create_proton_transport_subelement(element)
         self._create_uniform_source_sampling_subelement(element)
         self._create_plot_seed_subelement(element)
         self._create_ptables_subelement(element)
@@ -2712,6 +2735,7 @@ class Settings:
         settings._energy_mode_from_xml_element(elem)
         settings._max_order_from_xml_element(elem)
         settings._photon_transport_from_xml_element(elem)
+        settings._proton_transport_from_xml_element(elem)
         settings._uniform_source_sampling_from_xml_element(elem)
         settings._plot_seed_from_xml_element(elem)
         settings._ptables_from_xml_element(elem)

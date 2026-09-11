@@ -63,6 +63,7 @@ fig.savefig('tmp.png')
 settings = openmc.Settings()
 
 settings.run_mode = 'fixed source'
+settings.proton_transport = True # The default but showing that it is wired in
 settings.source = source
 settings.batches = 1
 settings.inactive = 10
