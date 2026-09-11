@@ -111,10 +111,11 @@ void collision(Particle& p)
 
 /** Proton energy straggling calculatation
  * 
- * Calculates the energy straggling effect for the current particle, Zeta2 in paper. Multiply the summed per-nuclide contributions with an energy dependent prefactor. Distance is then multiplied in. Finally, we add a random Gaussian draw. The factor of 1e6 is because the calculation is in MeV and we want eV to match the calling code
+ * Calculates the energy straggling effect for the current particle, Zeta2 in paper. Multiply the summed per-nuclide contributions with an energy dependent prefactor. Distance is then multiplied in. Finally, we add a random Gaussian draw.
  */
-double proton_energy_straggle(const Particle & p, double distance){
-    return std::sqrt(p.macro_xs().energy_straggling * energy_straggling_update_sq(p.E()) * distance) * random_straggle() * 1e6;
+double proton_energy_straggle(Particle & p, double distance){
+
+    return std::sqrt(p.macro_xs().energy_straggling * energy_straggling_update_sq(p.E()) * distance) * normal_variate(0.0, 1.0, p.current_seed()) * MeVToeV;
 }
 
 /** Calculate small angle scattering
@@ -128,7 +129,7 @@ void proton_small_angle_scatter(Particle &p){
   //Applying Spherical brownian motion. The result of this is the NEW direction in spherical polar co-ordinates
   //Start from the current direction
   std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
-  auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere);
+  auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere, p.current_seed());
 
   //Constructing new direction after spherical BM
   const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
@@ -159,15 +160,16 @@ void sample_proton_reaction(Particle&p){
   int i_nuclide = 0;
 
   //Deciding whether to do an elastic, inelastic or neither, based on the MFP for each type and the transport_distance
-  double path_to_next_event = random_exp(p.macro_xs().total);
+  // NOTE: I _think_ that if we do not perform the condensed history, i.e. the transport_distance is dicated by the collision distance, this now rolls twice for the probability, which is incorrect
+  double path_to_next_event = -std::log(prn(p.current_seed())) / p.macro_xs().total;
   if(p.transport_distance() > path_to_next_event){
     //We should do one or the other - decide which
-    auto ran = next_rand(); //Uniform random - compare with threshold to chose which
+    auto ran = prn(p.current_seed()); //Uniform random - compare with threshold to chose which
     if(ran < p.macro_xs().total_inelastic / p.macro_xs().total){
       //Inelastic scattering. Sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::inelastic);
       //Perform the scattering - returns a pair, updated E and cos(angle)
-      auto tmp = non_elastic_scatter(i_nuclide, p.E());
+      auto tmp = non_elastic_scatter(i_nuclide, p.E(), p.current_seed());
       //Cosine angle to apply below
       scat_cos2 = tmp.second;
       //Updated energy
@@ -176,7 +178,7 @@ void sample_proton_reaction(Particle&p){
       //Elastic scattering case - sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::elastic);
       //Calculate scattering angle
-      scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E());
+      scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E(), p.current_seed());
     }
     // Now Applying large angle scatter
     // NOTE: rotat_angle function picks a random phi for us if not specified

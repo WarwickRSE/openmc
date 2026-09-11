@@ -5,30 +5,22 @@
 #include <cmath>
 #include <stdexcept>
 #include <unordered_map>
-//TODO - what RNG to use?? NOT a file local static one pls!!
-// At that point also move the distribs into the relavant functions
 
 #include "openmc/nuclide.h"
+#include "openmc/random_dist.h"
 #include "openmc/proton_cross_sections.h"
 
 namespace openmc{
-static inline std::mt19937 proton_rng {std::random_device {}()};
-constexpr double MAX_DEFLECTION = 1.0e-2; // radians
 constexpr double fixed_step = 0.05; // A fixed step length used in temporary calc
 constexpr double MeVToeV = 1e6;
 constexpr double eVToMeV = 1e-6;
 constexpr double alpha_finestruc = 1.0/137.0;
 constexpr double mecsq = 0.511;   // mass of electron * speed of light squared, MeV
 constexpr double mpcsq = 938.346; // mass of proton * speed of light squared, MeV
-constexpr double log_hbar = -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
-constexpr double log_c = log(29979245800);                              // cm / s
-constexpr double log_avogadro = log(6) + 23 * log(10);
- 
+const double log_hbar = -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
+const double log_c = log(29979245800);                              // cm / s
+const double log_avogadro = log(6) + 23 * log(10);
 
-static inline std::uniform_real_distribution<double> uniform_dist {0.0, 1.0};
-static inline std::uniform_real_distribution<double> angle_dist {std::cos(MAX_DEFLECTION), 1.0};
-static inline std::normal_distribution<double> e_strag(0.0, 1.0);
-static inline std::normal_distribution<double> generic_gauss(0.0, 1.0);
 
 // IMPORTANT - THIS IS A WIP. A lot of this file is dumb static global state in order to test the MODEL needs before integrating to the codebase proper
 //TODO - move some of this into the Nuclide, Material or Particle classes?
@@ -39,8 +31,8 @@ inline double log_beta_fn(int a_in, int b_in){
   return std::lgamma(a) + std::lgamma(b) - std::lgamma(a+b);
 }
 
-inline double sample_beta(int beta){
-  auto ran = log_beta_fn(1+beta, 1)+log((1.0+beta) * uniform_dist(proton_rng));
+inline double sample_beta(int beta, std::uint64_t * seed){
+  auto ran = log_beta_fn(1+beta, 1)+log((1.0+beta) * prn(seed));
   ran = ran*(1.0/(1.0 + beta));
   ran = 1.0 - exp(ran);
   return ran;
@@ -54,15 +46,9 @@ inline double log_pochhammer(double a, double x){
     return std::lgamma(a + x) - std::lgamma(a);
 }
 
-inline double next_rand(){
+/*inline double next_rand(){
   return uniform_dist(proton_rng);
-}
-
-inline double random_exp(double lambda){
-  std::exponential_distribution<double> generic_exp(lambda);
-  return generic_exp(proton_rng);
-}
-
+}*/
   /** @brief Calculate BetaSq factor
    * 
    * Used by many of the calculations, See Eq (3), p 6 of [1].
@@ -94,10 +80,6 @@ inline double proton_bethe_bloch(int i_nuclide, double E, double I){
     return MeVToeV * 0.3072 * nuclide.Z_ *
              (log(2 * mecsq * betasq / (I * (1 - betasq))) - betasq) /
              (betasq);
-}
-
-inline double random_straggle(){
-  return e_strag(proton_rng);
 }
 
 //Random bump - Energy loss or gain due to straggling. Depends on e and material
@@ -209,20 +191,20 @@ inline double energy_straggling_update_sq(double e){
     return i;
   }
 
-  inline int number_of_blocks(double t) {
+  inline int number_of_blocks(double t, std::uint64_t * seed) {
     int m = 0;
     double theta = 1;
     if (t < 0.07) {
       double mu = 2.0 / t;
       double sigma = sqrt(2.0 / (3.0 * t));
-      m = round(mu + sigma * generic_gauss(proton_rng));
-      //m = round(mu + sigma * gsl_ran_gaussian_ziggurat(gen, 1));
+      m = round(mu + sigma * normal_variate(0.0, 1.0, seed));
     } else {
       std::vector<int> k(1, 0);
       bool proceed = true;
       double u = 0.0;
       while(u == 0.0){
-        u = uniform_dist(proton_rng); // TODO URGENT skip 0 somehow less stupid
+        // Redrawing if we get exact 0.0 - this is the simplest solution which preserves the random qualities
+        u = prn(seed);
       }
       double smin = 0, smax = 0, increment = 0;
       while (proceed) {
@@ -254,21 +236,21 @@ inline double energy_straggling_update_sq(double e){
     return m;
   }
 
-  inline double wright_fisher_diffusion(double r){
+  inline double wright_fisher_diffusion(double r, std::uint64_t * seed){
     double y;
     if (r > 1e-9) {
-      int m = number_of_blocks(r);
-      y = sample_beta(1 + m);
+      int m = number_of_blocks(r, seed);
+      y = sample_beta(1 + m, seed);
     } else {
       y = r / 2;
       std::normal_distribution<double> distribution(0.0, sqrt(r * y * (1 - y)));
-      auto sample = distribution(proton_rng);
+      auto sample = prn(seed);
       y = std::abs(sample);
     }
     return y;
   }
 
-  inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_transformed_precomp){
+  inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_transformed_precomp, uint64_t * seed){
     std::vector<double> z, u, w;
     u.resize(3);
     w.resize(3);
@@ -276,8 +258,8 @@ inline double energy_straggling_update_sq(double e){
     z = direction_in;
 
     auto moliere_sd_sq = (distance/fixed_step)* moliere_transformed_precomp;
-    auto y = wright_fisher_diffusion(moliere_sd_sq);
-    auto theta = 2.0 * PI * next_rand();
+    auto y = wright_fisher_diffusion(moliere_sd_sq, seed);
+    auto theta = 2.0 * PI * prn(seed);
 
       // Set up defaults for when z is near (0, 0, 1)
       u = {1.0/sqrt(2.0), 1.0/sqrt(2.0), 0.0};
@@ -386,9 +368,9 @@ inline double energy_straggling_update_sq(double e){
     nuclide.proton_ne_xsec = CS_3d(filename);
   }
 
-  inline double rutherford_elastic_scatter(int i_nuclide, double e){
+  inline double rutherford_elastic_scatter(int i_nuclide, double e, std::uint64_t * seed){
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
-    auto alpha = nuclide.proton_el_xsec.sample(e*eVToMeV, next_rand());
+    auto alpha = nuclide.proton_el_xsec.sample(e*eVToMeV, prn(seed));
     return cos(alpha); //TODO URGENT cm to lab??
   }
 
@@ -470,11 +452,11 @@ inline double energy_straggling_update_sq(double e){
    * @param e Energy of the incident proton in eV
    * @return A pair, containing the updated energy in eV and the polar scattering angle
    */
-  inline std::pair<double, double> non_elastic_scatter(int i_nuclide, double e){
+  inline std::pair<double, double> non_elastic_scatter(int i_nuclide, double e, std::uint64_t * seed){
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     double alpha;
     e = e*eVToMeV; // e passed by value so working with a COPY below
-    sample_nonelastic_collision(nuclide, e, alpha, next_rand(), next_rand());
+    sample_nonelastic_collision(nuclide, e, alpha, prn(seed), prn(seed));
     return {e*MeVToeV, alpha};
   }
 

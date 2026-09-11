@@ -100,7 +100,7 @@ void sample_secondary_photons(Particle& p, int i_nuclide);
 void split_particle(Particle& p);
 
 // PROTON_TRANSPORT
-double proton_energy_straggle(const Particle & p, double distance);
+double proton_energy_straggle(Particle & p, double distance);
 void proton_small_angle_scatter(Particle & p);
 
 
