@@ -15,6 +15,7 @@ water.add_element('O', 1.0)
 water.set_density('g/cm3', 1.0)
 #water.set_density('g/cm3', 0.0006) # Steam
 water.temperature = 300 # K
+water.mean_activation_energy = 70 #eV
 
 materials.append(water)
 materials.export_to_xml()

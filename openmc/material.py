@@ -126,6 +126,8 @@ class Material(IDManagerMixin):
         :attr:`volume` attribute is set.
     ncrystal_cfg : str
         NCrystal configuration string
+    mean_activation_energy : float
+        Mean activation energy for the material, in eV
 
         .. versionadded:: 0.13.3
 
@@ -145,6 +147,7 @@ class Material(IDManagerMixin):
         volume: float | None = None,
         components: dict | None = None,
         percent_type: str = "ao",
+        mean_activation_energy: float | None = None,
     ):
         # Initialize class attributes
         self.id = material_id
@@ -159,6 +162,7 @@ class Material(IDManagerMixin):
         self._atoms = {}
         self._isotropic = []
         self._ncrystal_cfg = None
+        self._mean_activation_energy = mean_activation_energy
 
         # A list of tuples (nuclide, percent, percent type)
         self._nuclides = []
@@ -184,6 +188,8 @@ class Material(IDManagerMixin):
         string += '{: <16}=\t{}\n'.format('\tID', self._id)
         string += '{: <16}=\t{}\n'.format('\tName', self._name)
         string += '{: <16}=\t{}\n'.format('\tTemperature', self._temperature)
+
+        string += '{: <16}=\t{}\n'.format('\tMean Activation Energy', self._mean_activation_energy)
 
         string += '{: <16}=\t{}'.format('\tDensity', self._density)
         string += f' [{self._density_units}]\n'
@@ -233,6 +239,16 @@ class Material(IDManagerMixin):
         cv.check_type(f'Temperature for Material ID="{self._id}"',
                       temperature, (Real, type(None)))
         self._temperature = temperature
+
+    @property
+    def mean_activation_energy(self) -> float | None:
+        return self._mean_activation_energy
+
+    @mean_activation_energy.setter
+    def mean_activation_energy(self, mean_activation_energy: Real | None):
+        cv.check_type(f'Mean Activation Energy for Material ID="{self._id}"',
+                      mean_activation_energy, (Real, type(None)))
+        self._mean_activation_energy = mean_activation_energy
 
     @property
     def density(self) -> float | None:
@@ -1789,6 +1805,9 @@ class Material(IDManagerMixin):
             subelement.set("units", self._density_units)
         else:
             raise ValueError(f'Density has not been set for material {self.id}!')
+
+        if self._mean_activation_energy:
+            element.set("mean_activation_energy", str(self._mean_activation_energy))
 
         if self._macroscopic is None:
             # Create nuclide XML subelements

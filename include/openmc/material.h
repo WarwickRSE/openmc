@@ -208,6 +208,8 @@ public:
 
   unique_ptr<Bremsstrahlung> ttb_;
 
+  double mean_activation_energy_; //!< Averaged MEE for the material. This is user specif
+
 private:
   //----------------------------------------------------------------------------
   // Private methods
