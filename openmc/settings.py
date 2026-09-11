@@ -185,6 +185,13 @@ class Settings:
         Whether to use photon transport.
     proton_transport : bool
         Whether to use proton transport.
+    proton_settings : dict
+        Options controlling proton condensed-history transport. Acceptable
+        keys are:
+
+        :max_step_len: Maximum step length per condensed-history step [cm]. (float)
+        :min_step_len: Minimum step length per condensed-history step [cm]. (float)
+        :max_energy_loss: Maximum energy loss per step [eV/cm]. (float)
     plot_seed : int
        Initial seed for randomly generated plot colors.
     ptables : bool
@@ -424,6 +431,7 @@ class Settings:
         self._electron_treatment = None
         self._photon_transport = None
         self._proton_transport = None
+        self._proton_settings = {}
         self._atomic_relaxation = None
         self._plot_seed = None
         self._ptables = None
@@ -723,6 +731,20 @@ class Settings:
     def proton_transport(self, proton_transport: bool):
         cv.check_type('proton transport', proton_transport, bool)
         self._proton_transport = proton_transport
+
+    @property
+    def proton_settings(self) -> dict:
+        return self._proton_settings
+
+    @proton_settings.setter
+    def proton_settings(self, proton_settings: dict):
+        cv.check_type('proton settings', proton_settings, Mapping)
+        for key, value in proton_settings.items():
+            cv.check_value('proton_settings key', key,
+                           ('max_step_len', 'min_step_len', 'max_energy_loss'))
+            cv.check_type(f'proton settings {key}', value, Real)
+            cv.check_greater_than(f'proton settings {key}', value, 0.0)
+        self._proton_settings = proton_settings
 
     @property
     def uniform_source_sampling(self) -> bool:
@@ -1718,6 +1740,13 @@ class Settings:
             element = ET.SubElement(root, "proton_transport")
             element.text = str(self._proton_transport).lower()
 
+    def _create_proton_settings_subelement(self, root):
+        if self._proton_settings:
+            element = ET.SubElement(root, "proton_settings")
+            for key, value in self._proton_settings.items():
+                subelement = ET.SubElement(element, key)
+                subelement.text = str(value)
+
     def _create_plot_seed_subelement(self, root):
         if self._plot_seed is not None:
             element = ET.SubElement(root, "plot_seed")
@@ -2260,6 +2289,14 @@ class Settings:
         if text is not None:
             self.proton_transport = text in ('true', '1')
 
+    def _proton_settings_from_xml_element(self, root):
+        elem = root.find('proton_settings')
+        if elem is not None:
+            for key in ('max_step_len', 'min_step_len', 'max_energy_loss'):
+                value = get_text(elem, key)
+                if value is not None:
+                    self.proton_settings[key] = float(value)
+
     def _uniform_source_sampling_from_xml_element(self, root):
         text = get_text(root, 'uniform_source_sampling')
         if text is not None:
@@ -2616,6 +2653,7 @@ class Settings:
         self._create_max_order_subelement(element)
         self._create_photon_transport_subelement(element)
         self._create_proton_transport_subelement(element)
+        self._create_proton_settings_subelement(element)
         self._create_uniform_source_sampling_subelement(element)
         self._create_plot_seed_subelement(element)
         self._create_ptables_subelement(element)
@@ -2736,6 +2774,7 @@ class Settings:
         settings._max_order_from_xml_element(elem)
         settings._photon_transport_from_xml_element(elem)
         settings._proton_transport_from_xml_element(elem)
+        settings._proton_settings_from_xml_element(elem)
         settings._uniform_source_sampling_from_xml_element(elem)
         settings._plot_seed_from_xml_element(elem)
         settings._ptables_from_xml_element(elem)

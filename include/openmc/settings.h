@@ -50,6 +50,12 @@ struct CollisionTrackConfig {
   int64_t max_files {1}; //!< Maximum number of collision track files
 };
 
+struct ProtonSettings {
+  double max_step_len {0.2};     //!< Maximum condensed-history step length [cm]
+  double min_step_len {0.05};    //!< Minimum condensed-history step length [cm]
+  double max_energy_loss {10000.0}; //!< Maximum energy loss per step [eV/cm]
+};
+
 //==============================================================================
 // Global variable declarations
 //==============================================================================
@@ -170,6 +176,7 @@ extern std::unordered_set<int>
 extern std::unordered_set<int>
   source_write_surf_id; //!< Surface ids where sources will be written
 extern CollisionTrackConfig collision_track_config;
+extern ProtonSettings proton_settings;
 extern double source_rejection_fraction; //!< Minimum fraction of source sites
                                          //!< that must be accepted
 extern double free_gas_threshold;        //!< Threshold multiplier for free gas

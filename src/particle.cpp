@@ -301,15 +301,16 @@ void Particle::event_advance()
     // PROTON_TRANSPORT - calculate the transport_distance - distance to next
     // evaluation of condensed history step
     // We cap this based on a maximum_energy_loss, and a range of step lengths
-    // TODO - move these into settings
     // Additional distance caps: pure step len, and energy loss len
     // NOTE: in VOID material there are no collisions or energy loss to consider
-    const double max_step_len = 0.2, min_step_len = 0.05;
-    const double max_energy_loss = 10000.0; // in eV/cm
+    const auto& proton_settings = settings::proton_settings;
     //Distance based on maximum energy loss, with a lower bound
-    const double loss_len = std::max(max_energy_loss/this->macro_xs().loss_rate, min_step_len);
+    const double loss_len = std::max(
+      proton_settings.max_energy_loss / this->macro_xs().loss_rate,
+      proton_settings.min_step_len);
     // Final distance based on material boundary, distance to next collision, the loss capped distance, and some cutoffs
-    transport_distance() = std::min({collision_distance(), max_step_len, loss_len});
+    transport_distance() =
+      std::min({collision_distance(), proton_settings.max_step_len, loss_len});
     distance = std::min({boundary().distance(), transport_distance(), distance_cutoff});
   }else{
     transport_distance() = collision_distance();

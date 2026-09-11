@@ -81,6 +81,7 @@ int openmc_finalize()
   settings::assume_separate = false;
   settings::check_overlaps = false;
   settings::collision_track_config = CollisionTrackConfig {};
+  settings::proton_settings = ProtonSettings {};
   settings::confidence_intervals = false;
   settings::create_fission_neutrons = true;
   settings::create_delayed_neutrons = true;

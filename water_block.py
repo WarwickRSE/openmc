@@ -73,6 +73,7 @@ settings.verbosity = 10
 settings.track = [(1, 1, particle) for particle in range(1, int(settings.particles/10))]
 
 settings.cutoff = {'energy_proton': 2.0e5} #Cutoff energy in eV
+settings.proton_settings = {'max_step_len': 0.2, 'min_step_len':0.05, 'max_energy_loss':1e3}
 
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)

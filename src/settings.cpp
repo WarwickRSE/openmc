@@ -136,6 +136,7 @@ double source_rejection_fraction {0.05};
 double free_gas_threshold {400.0};
 std::unordered_set<int> source_write_surf_id;
 CollisionTrackConfig collision_track_config {};
+ProtonSettings proton_settings {};
 int64_t ssw_max_particles;
 int64_t ssw_max_files;
 int64_t ssw_cell_id {C_NONE};
@@ -622,6 +623,23 @@ void read_settings_xml(pugi::xml_node root)
   // Check for proton transport
   if (check_for_node(root, "proton_transport")) {
     proton_transport = get_node_value_bool(root, "proton_transport");
+  }
+
+  // Proton transport settings
+  if (check_for_node(root, "proton_settings")) {
+    xml_node node_proton = root.child("proton_settings");
+    if (check_for_node(node_proton, "max_step_len")) {
+      proton_settings.max_step_len =
+        std::stod(get_node_value(node_proton, "max_step_len"));
+    }
+    if (check_for_node(node_proton, "min_step_len")) {
+      proton_settings.min_step_len =
+        std::stod(get_node_value(node_proton, "min_step_len"));
+    }
+    if (check_for_node(node_proton, "max_energy_loss")) {
+      proton_settings.max_energy_loss =
+        std::stod(get_node_value(node_proton, "max_energy_loss"));
+    }
   }
 
   // Check for atomic relaxation
