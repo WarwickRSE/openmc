@@ -24,13 +24,6 @@ const double log_avogadro = log(6) + 23 * log(10);
 
 //TODO - move some of this into the Nuclide, Material or Particle classes?
 
-inline double sample_beta(int beta, std::uint64_t * seed){
-  auto ran = log_beta_fn(1+beta, 1)+log((1.0+beta) * prn(seed));
-  ran = ran*(1.0/(1.0 + beta));
-  ran = 1.0 - exp(ran);
-  return ran;
-}
-
   /** @brief Calculate BetaSq factor
    * 
    * Used by many of the calculations, See Eq (3), p 6 of [1].

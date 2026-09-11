@@ -4,6 +4,7 @@
 
 #include "openmc/constants.h"
 #include "openmc/random_lcg.h"
+#include "openmc/math_functions.h"
 
 namespace openmc {
 
@@ -49,6 +50,13 @@ double normal_variate(double mean, double standard_deviation, uint64_t* seed)
   } while (r2 > 1 || r2 == 0);
   double z = std::sqrt(-2.0 * std::log(r2) / r2);
   return mean + standard_deviation * z * x;
+}
+
+double sample_beta(int beta, std::uint64_t * seed){
+  auto ran = log_beta_fn(1+beta, 1)+log((1.0+beta) * prn(seed));
+  ran = ran*(1.0/(1.0 + beta));
+  ran = 1.0 - exp(ran);
+  return ran;
 }
 
 } // namespace openmc

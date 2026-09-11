@@ -75,6 +75,13 @@ extern "C" double watt_spectrum(double a, double b, uint64_t* seed);
 
 extern "C" double normal_variate(double mean, double std_dev, uint64_t* seed);
 
+//! Sample the Beta distribution
+//!
+//! Sample from the (constrained) beta distribution beta(1+beta, 1)
+//! Uses inverse-transform sampling method so should perform adequately
+//! for very large beta
+double sample_beta(int beta, std::uint64_t * seed);
+
 } // namespace openmc
 
 #endif // OPENMC_RANDOM_DIST_H
