@@ -77,8 +77,8 @@ class Settings:
         Dictionary defining weight cutoff, energy cutoff and time cutoff. The
         dictionary may have the following keys, 'weight', 'weight_avg',
         'survival_normalization', 'energy_neutron', 'energy_photon',
-        'energy_electron', 'energy_positron', 'time_neutron', 'time_photon',
-        'time_electron', and 'time_positron'. Value for 'weight' should be a
+        'energy_electron', 'energy_positron', 'energy_proton', 'time_neutron',
+        'time_photon', 'time_electron', and 'time_positron'. Value for 'weight' should be a
         float indicating weight cutoff below which particle undergo Russian
         roulette. Value for 'weight_avg' should be a float indicating weight
         assigned to particles that are not killed after Russian roulette. Value
@@ -1149,7 +1149,7 @@ class Settings:
             elif key == 'survival_normalization':
                 cv.check_type('survival normalization', cutoff[key], bool)
             elif key in ['energy_neutron', 'energy_photon', 'energy_electron',
-                         'energy_positron']:
+                         'energy_positron', 'energy_proton']:
                 cv.check_type('energy cutoff', cutoff[key], Real)
                 cv.check_greater_than('energy cutoff', cutoff[key], 0.0)
             else:
@@ -2283,8 +2283,8 @@ class Settings:
         if elem is not None:
             self.cutoff = {}
             for key in ('energy_neutron', 'energy_photon', 'energy_electron',
-                        'energy_positron', 'weight', 'weight_avg', 'time_neutron',
-                        'time_photon', 'time_electron', 'time_positron',
+                        'energy_positron', 'energy_proton', 'weight', 'weight_avg',
+                        'time_neutron', 'time_photon', 'time_electron', 'time_positron',
                         'survival_normalization'):
                 value = get_text(elem, key)
                 if value is not None:

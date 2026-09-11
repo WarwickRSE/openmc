@@ -111,7 +111,7 @@ int64_t max_particles_in_flight {100000};
 int max_particle_events {1000000};
 
 ElectronTreatment electron_treatment {ElectronTreatment::TTB};
-array<double, 5> energy_cutoff {0.0, 1000.0, 0.0, 0.0, 0.5e6}; //TODO - add to settings.py
+array<double, 5> energy_cutoff {0.0, 1000.0, 0.0, 0.0, 1.0e5};
 array<double, 5> time_cutoff {INFTY, INFTY, INFTY, INFTY, INFTY};
 int ifp_n_generation {-1};
 IFPParameter ifp_parameter {IFPParameter::None};
@@ -746,6 +746,10 @@ void read_settings_xml(pugi::xml_node root)
     if (check_for_node(node_cutoff, "energy_positron")) {
       energy_cutoff[3] =
         std::stod(get_node_value(node_cutoff, "energy_positron"));
+    }
+    if (check_for_node(node_cutoff, "energy_proton")) {
+      energy_cutoff[4] =
+        std::stod(get_node_value(node_cutoff, "energy_proton"));
     }
     if (check_for_node(node_cutoff, "time_neutron")) {
       time_cutoff[0] = std::stod(get_node_value(node_cutoff, "time_neutron"));

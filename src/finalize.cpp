@@ -86,7 +86,7 @@ int openmc_finalize()
   settings::create_delayed_neutrons = true;
   settings::electron_treatment = ElectronTreatment::LED;
   settings::delayed_photon_scaling = true;
-  settings::energy_cutoff = {0.0, 1000.0, 0.0, 0.0, 0.0};
+  settings::energy_cutoff = {0.0, 1000.0, 0.0, 0.0, 0.5e6};
   settings::time_cutoff = {INFTY, INFTY, INFTY, INFTY, INFTY};
   settings::entropy_on = false;
   settings::event_based = false;
