@@ -160,9 +160,8 @@ void sample_proton_reaction(Particle&p){
   int i_nuclide = 0;
 
   //Deciding whether to do an elastic, inelastic or neither, based on the MFP for each type and the transport_distance
-  // NOTE: I _think_ that if we do not perform the condensed history, i.e. the transport_distance is dicated by the collision distance, this now rolls twice for the probability, which is incorrect
-  double path_to_next_event = -std::log(prn(p.current_seed())) / p.macro_xs().total;
-  if(p.transport_distance() > path_to_next_event){
+  //NOTE: we could put this check higher up, but this is the first point where we know we're a proton. And we also want the 'kill' logic to fire after every energy loss, not only collisions.
+  if(p.collision_distance() <= p.transport_distance()){
     //We should do one or the other - decide which
     auto ran = prn(p.current_seed()); //Uniform random - compare with threshold to chose which
     if(ran < p.macro_xs().total_inelastic / p.macro_xs().total){
