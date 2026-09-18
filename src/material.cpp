@@ -896,10 +896,10 @@ void Material::calculate_proton_xs(Particle& p) const
 
   //Adding other material dependent factors - TODO check
   p.macro_xs().energy_straggling /= total_density; // TODO double check this factor
-  p.macro_xs().energy_straggling *= (this->density_gpcc()) * exp(log_avogadro); 
+  p.macro_xs().energy_straggling *= (this->density_gpcc()) * exp(proton_sde::log_avogadro); 
 
   //This converts from the partial chi calculations into the complete sigma_E including the density
-  p.macro_xs().moliere = moliere_transform(p.E(), total_chi_c_fac, total_chi_a_numerator, density_gpcc());
+  p.macro_xs().moliere = proton_sde::moliere_transform(p.E(), total_chi_c_fac, total_chi_a_numerator, density_gpcc());
 
 }
 void Material::calculate_neutron_xs(Particle& p) const

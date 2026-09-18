@@ -982,11 +982,11 @@ void Particle::update_proton_xs(int i_nuclide, double MEE_material)
   if (E() != micro.last_E) {
     micro.absorption = 0.0;
     micro.last_E = E();
-    micro.loss_rate = proton_bethe_bloch(i_nuclide, E(), MEE_material);
-    micro.energy_straggling = energy_straggling_sd(i_nuclide);
-    micro.elastic = rutherford_elastic_rate(i_nuclide, E());
-    micro.inelastic = non_elastic_rate(i_nuclide, E());
-    micro.moliere_precomp = moliere_scattering_precomp(i_nuclide, E());
+    micro.loss_rate = proton_sde::proton_bethe_bloch(i_nuclide, E(), MEE_material);
+    micro.energy_straggling = proton_sde::energy_straggling_sd(i_nuclide);
+    micro.elastic = proton_sde::rutherford_elastic_rate(i_nuclide, E());
+    micro.inelastic = proton_sde::non_elastic_rate(i_nuclide, E());
+    micro.moliere_precomp = proton_sde::moliere_scattering_precomp(i_nuclide, E());
     micro.total = micro.elastic + micro.inelastic;
   }
   

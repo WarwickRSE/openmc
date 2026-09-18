@@ -234,11 +234,19 @@ void get_energy_index(
 double standard_normal_cdf(double z);
 
 //! Calculate the ln(Beta) for the Beta function
-double log_beta_fn(int a_in, int b_in);
+inline double constexpr log_beta_fn(int a_in, int b_in){
+  double a = (double)a_in;
+  double b = (double)b_in;
+  return std::lgamma(a) + std::lgamma(b) - std::lgamma(a+b);
+}
 //! Calculate ln(n!)
-double log_factorial(int n);
+inline double constexpr log_factorial(int n) {
+  return std::lgamma(static_cast<double>(n) + 1.0);
+}
 //! Calculate ln((a+x)! -a!) aka the Pochhammer symbol
-double log_pochhammer(double a, double x);
+inline double constexpr log_pochhammer(double a, double x){
+    return std::lgamma(a + x) - std::lgamma(a);
+}
 
 } // namespace openmc
 #endif // OPENMC_MATH_FUNCTIONS_H

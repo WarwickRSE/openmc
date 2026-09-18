@@ -115,7 +115,7 @@ void collision(Particle& p)
  */
 double proton_energy_straggle(Particle & p, double distance){
 
-    return std::sqrt(p.macro_xs().energy_straggling * energy_straggling_update_sq(p.E()) * distance) * normal_variate(0.0, 1.0, p.current_seed()) * MeVToeV;
+    return std::sqrt(p.macro_xs().energy_straggling * proton_sde::energy_straggling_update_sq(p.E()) * distance) * normal_variate(0.0, 1.0, p.current_seed()) * proton_sde::MeVToeV;
 }
 
 /** Calculate small angle scattering
@@ -129,7 +129,7 @@ void proton_small_angle_scatter(Particle &p){
   //Applying Spherical brownian motion. The result of this is the NEW direction in spherical polar co-ordinates
   //Start from the current direction
   std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
-  auto dir = spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere, p.current_seed());
+  auto dir = proton_sde::spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere, p.current_seed());
 
   //Constructing new direction after spherical BM
   const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
@@ -168,7 +168,7 @@ void sample_proton_reaction(Particle&p){
       //Inelastic scattering. Sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::inelastic);
       //Perform the scattering - returns a pair, updated E and cos(angle)
-      auto tmp = non_elastic_scatter(i_nuclide, p.E(), p.current_seed());
+      auto tmp = proton_sde::non_elastic_scatter(i_nuclide, p.E(), p.current_seed());
       //Cosine angle to apply below
       scat_cos2 = tmp.second;
       //Updated energy
@@ -177,7 +177,7 @@ void sample_proton_reaction(Particle&p){
       //Elastic scattering case - sample a nuclide type
       i_nuclide = sample_nuclide(p, CType::elastic);
       //Calculate scattering angle
-      scat_cos2 = rutherford_elastic_scatter(i_nuclide, p.E(), p.current_seed());
+      scat_cos2 = proton_sde::rutherford_elastic_scatter(i_nuclide, p.E(), p.current_seed());
     }
     // Now Applying large angle scatter
     // NOTE: rotat_angle function picks a random phi for us if not specified
