@@ -112,8 +112,8 @@ namespace openmc{
     //! \return A pair, consisting of chi_c**2, and chi_c**2 * log(chi_a**2)
     inline std::pair<double, double> moliere_scattering_precomp(int i_nuclide, double e){
     auto energy = e*eVToMeV;
-    auto beta_sq = betaSq(e);
-    auto pv_sq = pvSq(e);
+    auto beta_sq = betaSq(energy);
+    auto pv_sq = pvSq(energy);
 
     const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     // Nuclide dependent factor part 1
@@ -138,7 +138,7 @@ namespace openmc{
       auto chi_a_sq = exp(sum_a/sum_c);
       energy = energy * eVToMeV;
       auto pv_sq = pvSq(energy);
-      auto chi_c_sq = sum_c * 0.157 * fixed_step * density / pv_sq;
+      auto chi_c_sq = sum_c * 0.157 * fixed_step / pv_sq;
       auto omega = chi_c_sq / (chi_a_sq * 2.0 * (1.0 - 0.98)); // 0.98
       return chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2));
     }

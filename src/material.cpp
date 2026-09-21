@@ -882,14 +882,14 @@ void Material::calculate_proton_xs(Particle& p) const
     total_density += atom_density * A;
 
     //Summing the partial factors for Moliere small-angle scattering
-    // These DO NOT contain the mass_fraction
+    // Chi_c contains the mass_fraction, chi_a does not. Sum 'A*frac' and divide below by total_density
     //This sums Z(Z+1)/A, so _part_ of chi_c**2 and the denominator for chi_a**2
-    total_chi_c_fac += micro.moliere_precomp.first;
+    total_chi_c_fac += micro.moliere_precomp.first * atom_density * A;
     //This sums the numerator for log(chi_a**2)
-    total_chi_a_numerator += micro.moliere_precomp.second;
+    // TODO URGENT - is the paper or the test-code right about this line?
+    total_chi_a_numerator += micro.moliere_precomp.second * atom_density * A;
 
     // True collisional cross-sections
-    //TODO - Avogadro?
     p.macro_xs().total_elastic += atom_density * micro.elastic;
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
@@ -899,6 +899,10 @@ void Material::calculate_proton_xs(Particle& p) const
   p.macro_xs().energy_straggling *= (this->density_gpcc()) * exp(proton_sde::log_avogadro); 
 
   //This converts from the partial chi calculations into the complete sigma_E including the density
+  total_chi_c_fac /= total_density;
+  total_chi_a_numerator /= total_density;
+  // There's a minor difference here due to how we're doing the density
+  // TODO debug this a bit further
   p.macro_xs().moliere = proton_sde::moliere_transform(p.E(), total_chi_c_fac, total_chi_a_numerator, density_gpcc());
 
 }
