@@ -66,18 +66,29 @@ namespace openmc{
     auto sym = letter_to_string(name.substr(0, pos));
     filename += sym;
     filename += "_ne_rate.txt";
-    write_message(6, "Reading {} from {} ", name, filename);
-    nuclide.proton_ne_rate = CS_1d(filename);
-    // TODO remove double read
+    if(sym != "hydrogen"){
+      write_message(6, "Reading {} from {} ", name, filename);
+      nuclide.proton_ne_rate = CS_1d(filename);
+    }
+      // TODO remove double read
 
-    filename = path + sym+ "_el_ruth_cross_sec.txt";
-    write_message(6, "Reading {} from {} ", name, filename);
-    nuclide.proton_el_rate = CS_1d(filename);
-    nuclide.proton_el_xsec = CS_2d(filename, 0.04);
+    if(sym != "hydrogen"){
+      filename = path + sym+ "_el_ruth_cross_sec.txt";
+      write_message(6, "Reading {} from {} ", name, filename);
+      nuclide.proton_el_rate = CS_1d(filename, 0.04);
+      nuclide.proton_el_xsec = CS_2d(filename, 0.04);
+    }else{
+      filename = path + sym+ "_el_ruth_cross_sec.txt";
+      write_message(6, "Reading {} from {} ", name, filename);
+      nuclide.proton_el_rate = CS_1d(filename, 0.04, 0.04);
+      nuclide.proton_el_xsec = CS_2d(filename, 0.04, 0.04);
+    }
 
-    write_message(6, "Reading {} from {} ", name, filename);
-    filename = path + sym+ "_ne_energyangle_cdf.txt";
-    nuclide.proton_ne_xsec = CS_3d(filename);
+    if(sym != "hydrogen"){
+      write_message(6, "Reading {} from {} ", name, filename);
+      filename = path + sym+ "_ne_energyangle_cdf.txt";
+      nuclide.proton_ne_xsec = CS_3d(filename);
+    }
   }
 
 }
