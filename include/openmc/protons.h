@@ -7,8 +7,13 @@
 #include <unordered_map>
 
 #include "openmc/math_functions.h"
-#include "openmc/nuclide.h"
 #include "openmc/random_dist.h"
+
+// Allows mocking out of nuclide
+#ifndef __nuclide_included__
+#include "openmc/nuclide.h"
+#define __nuclide_included__
+#endif
 #include "openmc/proton_cross_sections.h"
 
 namespace openmc{
@@ -44,11 +49,11 @@ namespace openmc{
     //! 
     //! Computes the inelastic energy loss per cm using bethe-bloch formula
     //!  This is for a single nuclide and is per density. Multiply by density to get an energy loss in eV/cm
-    //! \param i_nuclide Index for the nuclide in the global table
+    //! \param nuclide The Nuclide
     //! \param E Initial Energy of the proton in eV
     //! \param I Mean activation energy for current material in eV
-    inline double proton_bethe_bloch(int i_nuclide, double E, double I){
-      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    inline double proton_bethe_bloch(const Nuclide & nuclide, double E, double I){
+      //const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
       // Bethe-bloch contrib for single atom of THIS Nuclide only, summed later
       E = E * eVToMeV; // Inside here, expecting MeV
       I = I * eVToMeV; // Ditto
@@ -71,34 +76,31 @@ namespace openmc{
     //! Per nuclide contribution to energy straggling
     //!
     //! Per-nuclide contribution to energy straggling adjustment
-    //! \param i_nuclide Index for the nuclide in the global table
-    inline double energy_straggling_sd(int i_nuclide) {
+    //! \param nuclide The Nuclide
+    inline double energy_straggling_sd(const Nuclide & nuclide) {
 
     //The micro part is just the sum of z; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
     // TODO - rho_i/A_i is the mass fraction? Need to nail this down
-    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     return nuclide.Z_;
   }
 
     //! Scattering rate for inelastic scattering
     //!
     //! Per nuclide contribution to inelastic scatterint rate
-    //! \param i_nuclide Index for the nuclide in the global table
+    //! \param nuclide The Nuclide
     //! \param e energy of particle being scattered in eV
     //! \return  The scattering rate sigma_e
-    inline double non_elastic_rate(int i_nuclide, double e){
-      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    inline double non_elastic_rate(const Nuclide & nuclide, double e){
       return nuclide.proton_ne_rate.evaluate(e*eVToMeV);
     }
     //! Scattering rate for Rutherford and elastic scattering
     //!
-    //! Per nuclide contribution to elastic scatterint rate 
-    //! \param i_nuclide Index for the nuclide in the global table
+    //! Per nuclide contribution to elastic scattering rate 
+    //! \param nuclide The Nuclide
     //! \param e energy of particle being scattered in eV
     //! \return  The scattering rate sigma_e
-    inline double rutherford_elastic_rate(int i_nuclide, double e){
-      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    inline double rutherford_elastic_rate(const Nuclide & nuclide, double e){
       return nuclide.proton_el_rate.evaluate(e*eVToMeV);
     }
 
@@ -107,15 +109,14 @@ namespace openmc{
     //! Effectively computes chi_c and chi_a from pages 7 and 8 of [1] for a single species.
     //! 
     //! NOTE: the return here is not strictly chi_c**2, only the per-nuclide part. We multiply in the other factors in moliere_transform. However this factor is the correct one for computing log(chi_a**2) from page 8 of [1]. 
-    //! \param i_nuclide Index for the nuclide in the global table
+    //! \param nuclide The Nuclide
     //! \param e The energy of the incident proton in eV
     //! \return A pair, consisting of chi_c**2, and chi_c**2 * log(chi_a**2)
-    inline std::pair<double, double> moliere_scattering_precomp(int i_nuclide, double e){
+    inline std::pair<double, double> moliere_scattering_precomp(const Nuclide & nuclide, double e){
     auto energy = e*eVToMeV;
     auto beta_sq = betaSq(energy);
     auto pv_sq = pvSq(energy);
 
-    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
     // Nuclide dependent factor part 1
     auto temp1 = nuclide.Z_ * (nuclide.Z_ + 1.0)/nuclide.A_;
     //chi_a**2 for single Nuclide
@@ -279,11 +280,10 @@ namespace openmc{
     //! Evaluate a single elastic scatter event
     //!
     //! Evaluate an elastic scatter event for a proton against the given nuclide at the given energy
-    //! \param i_nuclide Index into global table of nuclide to collide against
+    //! \param nuclide The Nuclide to collide against
     //! \param e Energy of incident particle
     //! \param seed Current seed for RNG
-    inline double rutherford_elastic_scatter(int i_nuclide, double e, std::uint64_t * seed){
-      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    inline double rutherford_elastic_scatter(const Nuclide & nuclide, double e, std::uint64_t * seed){
       auto alpha = nuclide.proton_el_xsec.sample(e*eVToMeV, prn(seed));
       return cos(alpha); //TODO URGENT cm to lab??
     }
@@ -360,11 +360,10 @@ namespace openmc{
     //!
     //! Evaluates a single inelastic collision with a single Nuclide for a proton at energy e.
     //! 
-    //! \param i_nuclide Index of the nuclide to collide with
+    //! \param nuclide The Nuclide
     //! \param e Energy of the incident proton in eV
     //! \return A pair, containing the updated energy in eV and the polar scattering angle
-    inline std::pair<double, double> non_elastic_scatter(int i_nuclide, double e, std::uint64_t * seed){
-      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    inline std::pair<double, double> non_elastic_scatter(const Nuclide & nuclide, double e, std::uint64_t * seed){
       double alpha;
       e = e*eVToMeV; // e passed by value so working with a COPY below
       sample_nonelastic_collision(nuclide, e, alpha, prn(seed), prn(seed));
