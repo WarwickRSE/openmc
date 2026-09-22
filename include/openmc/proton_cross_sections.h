@@ -86,6 +86,7 @@ struct CS_1d {
   }
 
   CS_1d(const CS_1d &other) : energy(other.energy), rate(other.rate) {}
+  CS_1d & operator=(const CS_1d & other){energy=other.energy;rate=other.rate; return *this;}
 
   double hydrogen_cm_to_lab(double ang, const double E) {
     ang = M_PI - ang;
@@ -250,6 +251,8 @@ struct CS_3d {
         rvalue(other.rvalue) {}
 
   CS_3d() : energy(), exit_energy(), cdf(), rvalue() {}
+  
+  CS_3d & operator=(const CS_3d & other){energy=other.energy; exit_energy=other.exit_energy; cdf=other.cdf;rvalue=other.rvalue; return *this;}
 
   void sample_from_energy_index(const double energy_index, const double u,
                                 double &out_energy_cm,
@@ -482,6 +485,7 @@ double hydrogen_cm_to_lab(double ang, const double E) {
       : energy(other.energy), exit_angle(other.exit_angle), cdf(other.cdf) {}
 
   CS_2d() : energy(), exit_angle(), cdf() {}
+  CS_2d & operator=(const CS_2d & other){energy=other.energy; exit_angle=other.exit_angle; cdf=other.cdf; return *this;} 
 
   double sample_from_energy_index(const double energy_index,
                                   const double u) const {

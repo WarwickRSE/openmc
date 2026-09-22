@@ -1,7 +1,11 @@
 #include <unordered_map>
 
 #include "openmc/proton_cross_sections.h"
+#ifndef __nuclide_included__
 #include "openmc/nuclide.h"
+#define __nuclide_included__
+#endif
+
 
 namespace openmc{
   //TODO - writen by AI because lazy but better to name files using chemical symbols in the first place??
