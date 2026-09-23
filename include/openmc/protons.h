@@ -28,7 +28,6 @@ namespace openmc{
     // but before C++26 the log function is not marked as such
     constexpr double log_hbar = -48.7724349; // -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
     constexpr double log_c = 24.1237712; //log(29979245800);// cm / s
-    constexpr double log_avogadro = 54.7512166; // log(6) + 23 * log(10);
 
     //TODO - move some of this into the Nuclide, Material or Particle classes?
 

@@ -100,7 +100,7 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(H1) * exp(openmc::proton_sde::log_avogadro) / H1.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(H1) / H1.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_H1[i], eps_calc));
        }
     }
@@ -110,7 +110,7 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(O16) * exp(openmc::proton_sde::log_avogadro) /O16.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(O16) /O16.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_O16[i], eps_calc));
        }
     }
@@ -120,7 +120,7 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(C12) * exp(openmc::proton_sde::log_avogadro) /C12.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(C12) /C12.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_C12[i], eps_calc));
        }
     }
@@ -130,6 +130,8 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
 TEST_CASE("Proton Cross Sections from File"){
     //Checking partial contributions from selected Nuclides
     // We have to reconstruct the density component and I think we have an N_AVOGADRO stray in these
+
+    // PRECISE matching here depends on correcting Avogadro's number to 6.022 in the test code to generate comparisons
 
     //Fake Nuclide - Hydrogen
     openmc::Nuclide H1;
@@ -153,7 +155,7 @@ TEST_CASE("Proton Cross Sections from File"){
 
     SECTION("Hydrogen Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_H1{0.113483, 0.113483, 0.157278, 0.171171, 0.427228};
+      std::vector<double> ref_el_H1{0.113902, 0.113902, 0.157858, 0.171803, 0.428805};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / H1.A_;
@@ -163,7 +165,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Oxygen Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_O16{0.00693154, 0.00693154, 0.0150371, 0.0255221, 0.0752361};
+      std::vector<double> ref_el_O16{0.00695712, 0.00695712, 0.0150926, 0.0256163, 0.0755137};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / O16.A_;
@@ -173,7 +175,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Carbon Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_C12{0.0134684, 0.0134684, 0.0287689, 0.0477845, 0.128913};
+      std::vector<double> ref_el_C12{0.0135181, 0.0135181, 0.0288751, 0.0479608, 0.129389};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 2.0 * openmc::N_AVOGADRO / C12.A_;
@@ -189,7 +191,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Oxygen Non-Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_ne_O16{0.0110632, 0.0110632, 0.0111382, 0.0121133, 0.0168386};
+      std::vector<double> ref_ne_O16{0.011104, 0.011104, 0.0111793, 0.012158, 0.0169007};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / O16.A_;
@@ -199,7 +201,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Carbon Non-Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_ne_C12{0.0222146, 0.0222146, 0.0226792, 0.0268254, 0.0362666};
+      std::vector<double> ref_ne_C12{0.0222966, 0.0222966, 0.0227629, 0.0269244, 0.0364004};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 2.0 * openmc::N_AVOGADRO / C12.A_;
