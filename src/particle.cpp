@@ -269,7 +269,7 @@ void Particle::event_calculate_xs()
     macro_xs().total_elastic = 0.0;
     macro_xs().total_inelastic = 0.0;
     macro_xs().energy_straggling = 0.0;
-    macro_xs().moliere = 0.0;
+    macro_xs().moliere = std::make_tuple(0.0, 0.0, 0.0);
   }
 }
 

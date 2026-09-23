@@ -129,7 +129,8 @@ void proton_small_angle_scatter(Particle &p){
   //Applying Spherical brownian motion. The result of this is the NEW direction in spherical polar co-ordinates
   //Start from the current direction
   std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
-  auto dir = proton_sde::spherical_bm(p.transport_distance(), p.E(), direction_in, p.macro_xs().moliere, p.current_seed());
+  auto moliere = proton_sde::moliere_transform(p.E(), p.macro_xs().moliere, p.transport_distance());
+  auto dir = proton_sde::spherical_bm(p.transport_distance(), p.E(), direction_in, moliere, p.current_seed());
 
   //Constructing new direction after spherical BM
   const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);

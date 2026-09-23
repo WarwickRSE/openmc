@@ -901,9 +901,8 @@ void Material::calculate_proton_xs(Particle& p) const
   //This converts from the partial chi calculations into the complete sigma_E including the density
   total_chi_c_fac /= total_density;
   total_chi_a_numerator /= total_density;
-  // There's a minor difference here due to how we're doing the density
-  // TODO debug this a bit further
-  p.macro_xs().moliere = proton_sde::moliere_transform(p.E(), total_chi_c_fac, total_chi_a_numerator, density_gpcc());
+  //Storing the factors as we can't make a final evaluation until we know the distance
+  p.macro_xs().moliere = std::make_tuple(total_chi_c_fac, total_chi_a_numerator, density_gpcc());
 
 }
 void Material::calculate_neutron_xs(Particle& p) const

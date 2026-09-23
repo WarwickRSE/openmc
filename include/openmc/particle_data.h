@@ -1,6 +1,8 @@
 #ifndef OPENMC_PARTICLE_DATA_H
 #define OPENMC_PARTICLE_DATA_H
 
+#include <tuple>
+
 #include "openmc/array.h"
 #include "openmc/constants.h"
 #include "openmc/particle_type.h"
@@ -239,7 +241,7 @@ struct MacroXS {
   double photon_prod; //!< macroscopic photon production xs
   double loss_rate; //!< per-cm energy loss rate for applicable particles
   double energy_straggling; //!per-cm ??? energy randomisation for applicable particles
-  double moliere; // !<Partial calculation - multiple scattering
+  std::tuple<double, double, double> moliere; // !<Partial calculation - multiple scattering
   double total_elastic; // !< Total elastic rate over all nuclides in current material
   double total_inelastic; //!<Total inelastic rate over all nucs
 

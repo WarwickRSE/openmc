@@ -19,7 +19,6 @@
 namespace openmc{
   
   namespace proton_sde{
-    constexpr double fixed_step = 0.05; // A fixed step length used in temporary calc
     constexpr double MeVToeV = 1e6;
     constexpr double eVToMeV = 1e-6;
     constexpr double alpha_finestruc = 1.0/137.0;
@@ -134,12 +133,16 @@ namespace openmc{
     //! \param sum_c first part of partial calculation
     //! \param sum_a second part of partial calculation
     //! \param density density of the material
-    //! \return squared std-deviation sigma-E for this process for a FIXED distance, fixed_step
-    inline constexpr double moliere_transform(double energy, double sum_c, double sum_a, double density){
+    //! \return squared std-deviation sigma-E for this process for distance step
+    inline constexpr double moliere_transform(double energy, std::tuple<double, double, double> moliere_facs, double step){
+      auto sum_c = std::get<0>(moliere_facs);
+      auto sum_a = std::get<1>(moliere_facs);
+      auto density = std::get<2>(moliere_facs);
+
       auto chi_a_sq = exp(sum_a/sum_c);
       energy = energy * eVToMeV;
       auto pv_sq = pvSq(energy);
-      auto chi_c_sq = sum_c * 0.157 * fixed_step / pv_sq;
+      auto chi_c_sq = sum_c * 0.157 * step * density / pv_sq;
       auto omega = chi_c_sq / (chi_a_sq * 2.0 * (1.0 - 0.98)); // 0.98
       return chi_c_sq * ((1.0 + omega) * log(1.0 + omega) / omega - 1.0) / (1.0 + std::pow(0.98, 2));
     }
@@ -236,14 +239,13 @@ namespace openmc{
     //! \param direction_in Initial direction of incident particle
     //! \param moliere_transformed_precomp Pre-calculated coeffcient for current material
     //! \param seed Current seed for RNG
-    inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_transformed_precomp, uint64_t * seed){
+    inline std::pair<double, double> spherical_bm(double distance, double energy, std::vector<double> direction_in, double moliere_sd_sq, uint64_t * seed){
       std::vector<double> z, u, w;
       u.resize(3);
       w.resize(3);
 
       z = direction_in;
 
-      auto moliere_sd_sq = (distance/fixed_step)* moliere_transformed_precomp;
       auto y = wright_fisher_diffusion(moliere_sd_sq, seed);
       auto theta = 2.0 * PI * prn(seed);
 
