@@ -237,7 +237,7 @@ TEST_CASE("Proton Cross Sections from File"){
       std::vector<double> ref_sa_H1{0.00394011, 0.00519039, 0.00771194, 0.0102573, 0.019297};
       for(int i = 0; i < 5; i++){
         auto E = energies[i]*1e6;
-        double density = 2.0;
+        double density = 1.0;
         auto tmp = openmc::proton_sde::moliere_scattering_precomp(H1, E);
         //Single nuclide, so no need to sum anything
         auto sd = openmc::proton_sde::moliere_transform(E, tmp.first, tmp.second, density);
@@ -250,7 +250,7 @@ TEST_CASE("Proton Cross Sections from File"){
       std::vector<double> ref_sa_O16{0.00579506, 0.00763454, 0.011343, 0.0150841, 0.0283483};
       for(int i = 0; i < 5; i++){
         auto E = energies[i]*1e6;
-        double density = 2.0;
+        double density = 1.0;
         auto tmp = openmc::proton_sde::moliere_scattering_precomp(O16, E);
         //Single nuclide, so no need to sum anything
         auto sd = openmc::proton_sde::moliere_transform(E, tmp.first, tmp.second, density);
