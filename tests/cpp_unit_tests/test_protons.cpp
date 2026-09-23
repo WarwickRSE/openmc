@@ -209,3 +209,68 @@ TEST_CASE("Proton Cross Sections from File"){
     }
  
   }
+
+  TEST_CASE("Proton Moliere Scattering"){
+    //Checking partial contributions from selected Nuclides
+    //Once again we are reproducing some of the transforms, but this helps cross-check the core
+    // calculation
+    //Fake Nuclide - Hydrogen
+    openmc::Nuclide H1;
+    H1.Z_ = 1;
+    H1.A_ = 1.008;
+    
+    //Fake Nuclide - Oxygen
+    openmc::Nuclide O16;
+    O16.Z_ = 8;
+    O16.A_ = 15.999;
+
+    //Fake Nuclide - Carbon
+    openmc::Nuclide C12;
+    C12.Z_ = 6;
+    C12.A_ = 12.011;
+
+    std::vector<double> energies{200, 150, 100, 75, 40};
+
+    const double fixed_step = 0.05;
+    SECTION("Hydrogen Small Angle rate"){
+
+      std::vector<double> ref_sa_H1{0.00394011, 0.00519039, 0.00771194, 0.0102573, 0.019297};
+      for(int i = 0; i < 5; i++){
+        auto E = energies[i]*1e6;
+        double density = 2.0;
+        auto tmp = openmc::proton_sde::moliere_scattering_precomp(H1, E);
+        //Single nuclide, so no need to sum anything
+        auto sd = openmc::proton_sde::moliere_transform(E, tmp.first, tmp.second, density);
+        auto rate =  std::sqrt((1.0/fixed_step)* sd);
+        REQUIRE_THAT(rate, Catch::Matchers::WithinRel(ref_sa_H1[i], eps_calc));
+       }
+    }
+    SECTION("Oxygen Small Angle rate"){
+
+      std::vector<double> ref_sa_O16{0.00579506, 0.00763454, 0.011343, 0.0150841, 0.0283483};
+      for(int i = 0; i < 5; i++){
+        auto E = energies[i]*1e6;
+        double density = 2.0;
+        auto tmp = openmc::proton_sde::moliere_scattering_precomp(O16, E);
+        //Single nuclide, so no need to sum anything
+        auto sd = openmc::proton_sde::moliere_transform(E, tmp.first, tmp.second, density);
+        auto rate =  std::sqrt((1.0/fixed_step)* sd);
+        REQUIRE_THAT(rate, Catch::Matchers::WithinRel(ref_sa_O16[i], eps_calc));
+       }
+    }
+    SECTION("Carbon Small Angle rate"){
+
+      std::vector<double> ref_sa_C12{0.00741039, 0.00975985, 0.0144957, 0.0192732, 0.036217};
+      for(int i = 0; i < 5; i++){
+        auto E = energies[i]*1e6;
+        double density = 2.0;
+        auto tmp = openmc::proton_sde::moliere_scattering_precomp(C12, E);
+        //Single nuclide, so no need to sum anything
+        auto sd = openmc::proton_sde::moliere_transform(E, tmp.first, tmp.second, density);
+        auto rate =  std::sqrt((1.0/fixed_step)* sd);
+        REQUIRE_THAT(rate, Catch::Matchers::WithinRel(ref_sa_C12[i], eps_calc));
+       }
+    }
+
+}
+ 
