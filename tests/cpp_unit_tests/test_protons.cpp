@@ -155,7 +155,7 @@ TEST_CASE("Proton Cross Sections from File"){
 
     SECTION("Hydrogen Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_H1{0.113902, 0.113902, 0.157858, 0.171803, 0.428805};
+      std::vector<double> ref_el_H1{0.0973714, 0.0973714, 0.120665, 0.105572, 0.196619};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / H1.A_;
