@@ -548,7 +548,7 @@ double hydrogen_cm_to_lab(double ang, const double E) {
 //! Convert from an Isotope name to the long-form element name
 std::string letter_to_string(std::string sym);
 //! Read the cross sections for specified name, and data file path
-void read_proton_data(Nuclide & nuclide, std::string path, std::string name);
+void read_proton_data(CS_1d * ne_rate, CS_1d* el_rate, CS_2d * el_xsec, CS_3d * ne_xsec, std::string path, std::string name);
 
 }
 #endif

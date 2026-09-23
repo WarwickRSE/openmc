@@ -1147,7 +1147,7 @@ extern "C" int openmc_load_nuclide(const char* name, const double* temps, int n)
       Nuclide& nuclide = *data::nuclides.at(i_nuclide);
       char* proton_data_path = std::getenv("OPENMC_PROTON_DATA");
       if (proton_data_path) {
-        read_proton_data(nuclide, proton_data_path, name);
+        read_proton_data(&nuclide.proton_el_rate, &nuclide.proton_ne_rate, &nuclide.proton_el_xsec, &nuclide.proton_ne_xsec, proton_data_path, name);
       }
     }
 

@@ -60,7 +60,7 @@ namespace openmc{
     return it->second;
   }
 
-  void read_proton_data(Nuclide & nuclide, std::string path, std::string name){
+  void read_proton_data(CS_1d * el_rate, CS_1d* ne_rate, CS_2d * el_xsec, CS_3d * ne_xsec, std::string path, std::string name){
     //NOTE: reads for EACH isotope afresh. TODO - fix...
 
     path += '/';
@@ -72,26 +72,26 @@ namespace openmc{
     filename += "_ne_rate.txt";
     if(sym != "hydrogen"){
       write_message(6, "Reading {} from {} ", name, filename);
-      nuclide.proton_ne_rate = CS_1d(filename);
+      if(ne_rate) *ne_rate = CS_1d(filename);
     }
       // TODO remove double read
 
     if(sym != "hydrogen"){
       filename = path + sym+ "_el_ruth_cross_sec.txt";
       write_message(6, "Reading {} from {} ", name, filename);
-      nuclide.proton_el_rate = CS_1d(filename, 0.04);
-      nuclide.proton_el_xsec = CS_2d(filename, 0.04);
+      if(el_rate) *el_rate = CS_1d(filename, 0.04);
+      if(el_xsec) *el_xsec = CS_2d(filename, 0.04);
     }else{
       filename = path + sym+ "_el_ruth_cross_sec.txt";
       write_message(6, "Reading {} from {} ", name, filename);
-      nuclide.proton_el_rate = CS_1d(filename, 0.04, 0.04);
-      nuclide.proton_el_xsec = CS_2d(filename, 0.04, 0.04);
+      if(el_rate) *el_rate = CS_1d(filename, 0.04, 0.04);
+      if(el_xsec) *el_xsec = CS_2d(filename, 0.04, 0.04);
     }
 
     if(sym != "hydrogen"){
       write_message(6, "Reading {} from {} ", name, filename);
       filename = path + sym+ "_ne_energyangle_cdf.txt";
-      nuclide.proton_ne_xsec = CS_3d(filename);
+      if(ne_xsec) *ne_xsec = CS_3d(filename);
     }
   }
 
