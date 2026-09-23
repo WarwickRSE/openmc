@@ -69,7 +69,7 @@ namespace openmc{
       e = e*eVToMeV;
       double betasq = betaSq(e);
       return 4 * PI * (1 - betasq / 2) / (1 - betasq) *
-        exp(2 * (log(alpha_finestruc) + log_hbar + log_c));
+        exp(2 * (log(alpha_finestruc) + log_hbar + log_c)) *6.022e23;
     }
     //! Per nuclide contribution to energy straggling
     //!
