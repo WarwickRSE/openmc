@@ -32,9 +32,6 @@ inline double prn(uint64_t * seed){return 1.0;}
 constexpr double eps_calc = 1e-5;
 constexpr double eps_weak = 1e-4;
 
-//TODO - get from somewhere... like char* proton_data_path = std::getenv("OPENMC_PROTON_DATA");
-const std::string data_path = "/media/raid/MathRadData/protons/";
-
 TEST_CASE("Proton Energy Rates in Single Nuclide"){
     //Checking partial contributions from selected Nuclides
 
@@ -134,9 +131,10 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
 
 TEST_CASE("Proton Cross Sections from File"){
     //Checking partial contributions from selected Nuclides
-    // We have to reconstruct the density component and I think we have an N_AVOGADRO stray in these
 
     // PRECISE matching here depends on correcting Avogadro's number to 6.022 in the test code to generate comparisons
+
+    const std::string data_path = std::getenv("OPENMC_PROTON_DATA");
 
     //Fake Nuclide - Hydrogen
     openmc::Nuclide H1;
