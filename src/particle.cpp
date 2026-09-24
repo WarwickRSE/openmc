@@ -324,12 +324,13 @@ void Particle::event_advance()
   if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
 
     // Small-angle scattering - updates p.u()
-    proton_small_angle_scatter(*this);
+    if(settings::proton_settings.use_sph) proton_small_angle_scatter(*this);
 
     // Energy loss in eV per cm
     double energyLossPer = this->macro_xs().loss_rate;
     // Energy straggling total correction (note ± eV)
-    double energyStraggle = proton_energy_straggle(*this, distance);
+    double energyStraggle = 0.0;
+    if(settings::proton_settings.use_straggling) energyStraggle = proton_energy_straggle(*this, distance);
     //Update the energy - subtract the loss, and the straggling. Cap energy so it cannot go -ve
     E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
   }

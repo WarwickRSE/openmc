@@ -51,6 +51,9 @@ struct CollisionTrackConfig {
 };
 
 struct ProtonSettings {
+  bool use_sph = true;  //!< Use spherical Brownian motion for small-angle scatter
+  bool use_large_angle = true;  //!< Apply large angle collisions
+  bool use_straggling = true;  //!< Apply random energy straggling correction
   double max_step_len {0.2};     //!< Maximum condensed-history step length [cm]
   double min_step_len {0.05};    //!< Minimum condensed-history step length [cm]
   double max_energy_loss {10000.0}; //!< Maximum energy loss per step [eV/cm]

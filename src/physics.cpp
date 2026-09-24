@@ -150,6 +150,7 @@ void proton_small_angle_scatter(Particle &p){
 */
 void sample_proton_reaction(Particle&p){
 
+  if(!settings::proton_settings.use_large_angle) return;
   //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
 
   //Tackle large-angle single collisions

@@ -189,6 +189,9 @@ class Settings:
         Options controlling proton condensed-history transport. Acceptable
         keys are:
 
+        :use_sph: Use spherical Brownian motion for small-angle scatter. (bool)
+        :use_large_angle: Apply large angle collisions. (bool)
+        :use_straggling: Apply random energy straggling correction. (bool)
         :max_step_len: Maximum step length per condensed-history step [cm]. (float)
         :min_step_len: Minimum step length per condensed-history step [cm]. (float)
         :max_energy_loss: Maximum energy loss per step [eV/cm]. (float)
@@ -739,11 +742,15 @@ class Settings:
     @proton_settings.setter
     def proton_settings(self, proton_settings: dict):
         cv.check_type('proton settings', proton_settings, Mapping)
+        bool_keys = ('use_sph', 'use_large_angle', 'use_straggling')
+        real_keys = ('max_step_len', 'min_step_len', 'max_energy_loss')
         for key, value in proton_settings.items():
-            cv.check_value('proton_settings key', key,
-                           ('max_step_len', 'min_step_len', 'max_energy_loss'))
-            cv.check_type(f'proton settings {key}', value, Real)
-            cv.check_greater_than(f'proton settings {key}', value, 0.0)
+            cv.check_value('proton_settings key', key, bool_keys + real_keys)
+            if key in bool_keys:
+                cv.check_type(f'proton settings {key}', value, bool)
+            else:
+                cv.check_type(f'proton settings {key}', value, Real)
+                cv.check_greater_than(f'proton settings {key}', value, 0.0)
         self._proton_settings = proton_settings
 
     @property
@@ -1745,7 +1752,10 @@ class Settings:
             element = ET.SubElement(root, "proton_settings")
             for key, value in self._proton_settings.items():
                 subelement = ET.SubElement(element, key)
-                subelement.text = str(value)
+                if isinstance(value, bool):
+                    subelement.text = str(value).lower()
+                else:
+                    subelement.text = str(value)
 
     def _create_plot_seed_subelement(self, root):
         if self._plot_seed is not None:
@@ -2292,6 +2302,10 @@ class Settings:
     def _proton_settings_from_xml_element(self, root):
         elem = root.find('proton_settings')
         if elem is not None:
+            for key in ('use_sph', 'use_large_angle', 'use_straggling'):
+                value = get_text(elem, key)
+                if value is not None:
+                    self.proton_settings[key] = value in ('true', '1')
             for key in ('max_step_len', 'min_step_len', 'max_energy_loss'):
                 value = get_text(elem, key)
                 if value is not None:

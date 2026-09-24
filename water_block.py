@@ -74,6 +74,10 @@ settings.track = [(1, 1, particle) for particle in range(1, int(settings.particl
 
 settings.cutoff = {'energy_proton': 2.0e5} #Cutoff energy in eV
 settings.proton_settings = {'max_step_len': 0.2, 'min_step_len':0.05, 'max_energy_loss':1e6}
+# Similarly, these default to True, but are shown here for clarity
+settings.proton_settings['use_sph'] = True
+settings.proton_settings['use_large_angle'] = True
+settings.proton_settings['use_straggling'] = True
 
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)

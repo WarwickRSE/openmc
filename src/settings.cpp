@@ -628,6 +628,17 @@ void read_settings_xml(pugi::xml_node root)
   // Proton transport settings
   if (check_for_node(root, "proton_settings")) {
     xml_node node_proton = root.child("proton_settings");
+    if (check_for_node(node_proton, "use_sph")) {
+      proton_settings.use_sph = get_node_value_bool(node_proton, "use_sph");
+    }
+    if (check_for_node(node_proton, "use_large_angle")) {
+      proton_settings.use_large_angle =
+        get_node_value_bool(node_proton, "use_large_angle");
+    }
+    if (check_for_node(node_proton, "use_straggling")) {
+      proton_settings.use_straggling =
+        get_node_value_bool(node_proton, "use_straggling");
+    }
     if (check_for_node(node_proton, "max_step_len")) {
       proton_settings.max_step_len =
         std::stod(get_node_value(node_proton, "max_step_len"));
