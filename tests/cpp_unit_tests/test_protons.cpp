@@ -94,13 +94,18 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
     // avoids having to set up so much infrastructure, and stub out the RNG
     //Consider this test to be a cross-reference for what the core should do and a check on the basic
     // Nuclide dependency. Note again we cancel a factor A_
+    /* Cross-match to proton_energy_straggle in physics.cpp:
+      return std::sqrt(p.macro_xs().energy_straggling * proton_sde::energy_straggling_update_sq(p.E()) * distance) * normal_variate(0.0, 1.0, p.current_seed()) * proton_sde::MeVToeV;
+      where p.macro_xs().energy_straggling = micro.energy_straggling;
+      and micro.energy_straggling = proton_sde::energy_straggling_sd(nuclide);
+    */
     SECTION("Hydrogen Energy Straggling"){
         // Created by test code
       std::vector<double> ref_strag_H1{0.438768, 0.427397, 0.416248, 0.410761, 0.403185};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(H1) / H1.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(H1) * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_H1[i], eps_weak));
        }
     }
@@ -110,7 +115,7 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(O16) /O16.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(O16) * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_O16[i], eps_weak));
        }
     }
@@ -120,7 +125,7 @@ TEST_CASE("Proton Energy Rates in Single Nuclide"){
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double distance = 1.0;
-        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(C12) /C12.A_ * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
+        auto loss = std::sqrt(openmc::proton_sde::energy_straggling_sd(C12) * openmc::proton_sde::energy_straggling_update_sq(E) * distance);
         REQUIRE_THAT(loss, Catch::Matchers::WithinRel(ref_strag_C12[i], eps_weak));
        }
     }

@@ -80,7 +80,7 @@ namespace openmc{
     //The micro part is just the sum of z; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
     // TODO - rho_i/A_i is the mass fraction? Need to nail this down
-    return nuclide.Z_;
+    return nuclide.Z_/nuclide.A_;
   }
 
     //! Scattering rate for inelastic scattering

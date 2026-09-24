@@ -877,7 +877,7 @@ void Material::calculate_proton_xs(Particle& p) const
 
     //Energy straggling- summing per-nuclide contribution
     // THIS IS NOT in barns
-    p.macro_xs().energy_straggling += atom_density * micro.energy_straggling;
+    p.macro_xs().energy_straggling += micro.energy_straggling;
     //
     total_density += atom_density * A;
 
@@ -893,10 +893,6 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().total_elastic += atom_density * micro.elastic;
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
-
-  //Adding other material dependent factors - TODO check
-  //p.macro_xs().energy_straggling /= total_density; // TODO double check this factor
-  //p.macro_xs().energy_straggling *= (this->density_gpcc()) * N_AVOGADRO; 
 
   //This converts from the partial chi calculations into the complete sigma_E including the density
   total_chi_c_fac /= total_density;
