@@ -3,6 +3,12 @@ import openmc
 import numpy as np
 #Adapted from OpenMC docs
 
+def fwhm_c(x, y, peak):
+    hm = peak/2.0
+    indexes = np.where(y > hm)[0]
+
+    return x[indexes[-1]] - x[indexes[0]]
+
 openmc.Materials.cross_sections = '/media/raid/MathRadData/endfb-viii.1-hdf5/cross_sections.xml'
 # Data path
 proton_path = '/media/raid/MathRadData/protons/'
@@ -170,6 +176,12 @@ fig.savefig("heating_xy.png", dpi=200)
 x_centers = np.linspace(0.0, xlen, mesh.dimension[0], endpoint=False)
 x_centers += 0.5 * (xlen / mesh.dimension[0])
 heating_lineout = heating_data.sum(axis=(1, 2))
+
+peak = heating_lineout.max()
+peak_ind = heating_lineout.argmax(axis=0)
+peak_x = x_centers[peak_ind]
+fwhm = fwhm_c(x_centers, heating_lineout, peak)
+print(peak_x, fwhm)
 
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.plot(x_centers, heating_lineout, color="black")

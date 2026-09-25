@@ -2,7 +2,11 @@ import matplotlib.pyplot as plt
 import openmc
 import numpy as np
 
-
+def fwhm_c(x, y, peak):
+    hm = peak/2.0
+    indexes = np.where(y > hm)[0]
+    print(indexes)
+    return x[indexes[-1]] - x[indexes[0]]
 
 
 tracks = openmc.Tracks('tracks.h5')
@@ -51,7 +55,7 @@ fig, ax = plt.subplots(figsize=(12, 4))
 image = ax.imshow(
     heatmap.T,
     origin="lower",
-    extent=(0.0, 50.0, -1.0, 1.0),
+    extent=(0.0, 20.0, -1.0, 1.0),
     aspect="auto",
     cmap="inferno",
 )
@@ -65,9 +69,16 @@ fig.savefig("heating_xy.png", dpi=200)
 
 
 
-x_centers = np.linspace(0.0, 60.0, mesh.dimension[0], endpoint=False)
-x_centers += 0.5 * (60.0 / mesh.dimension[0])
+x_centers = np.linspace(0.0, 20.0, mesh.dimension[0], endpoint=False)
+x_centers += 0.5 * (20.0 / mesh.dimension[0])
 heating_lineout = heating_data.sum(axis=(1, 2))
+
+peak = heating_lineout.max()
+peak_ind = heating_lineout.argmax(axis=0)
+peak_x = x_centers[peak_ind]
+fwhm = fwhm_c(x_centers, heating_lineout, peak)
+print(peak_x, fwhm)
+
 
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.plot(x_centers, heating_lineout, color="black")

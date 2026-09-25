@@ -1,11 +1,9 @@
+# Testing the energy loss elements of the proton transport model
+# We check overall penetration with straggling and all angular effects disabled
+# and compare overall penetration to NIST data
+# Then we check FWHM with straggling enabled and compare to ...???
 
-#We're going to disable the angular effects, and test penetration depth into a material
-# This means doing a moderate amount of protons and then finding the peak of the depth. This we check against expectation 
-
-# Then we repeat with the straggling enabled and check the width
-
-# We do these for water and for a block of e.g. carbon
-
+# These are NOT fast tests as we need to transport and score a moderate number of protons
 
 import openmc
 import pytest
@@ -183,4 +181,69 @@ def test_proton_penetration_bone(run_in_tmpdir, index):
     #for energy, depth in energy_depths.items():
     #    run_model(model, xlen, energy*1e6, depth)
     run_model(model, xlen, index*1e6, energy_depths[index])
+
+def fwhm_c(x, y, peak):
+    hm = peak/2.0
+    indexes = np.where(y > hm)[0]
+
+    return x[indexes[-1]] - x[indexes[0]]
+
+def run_model_straggled(model, xlen, energy, expected_peak, expected_fwhm):
+
+    model.settings.run_mode = 'fixed source'
+    model.settings.proton_transport = True # The default but showing that it is wired in
+    model.settings.batches = 1
+    model.settings.particles = 100
+    model.settings.verbosity = 1
+
+    source = openmc.IndependentSource(
+        particle='proton',
+        space=openmc.stats.Point((0.001, 0.0, 0.0)),
+        angle=openmc.stats.Monodirectional((1.0, 0.0, 0.0)),
+        energy=openmc.stats.Discrete([energy], [1.0])
+    )
+
+    model.settings.source = source
+    model.settings.cutoff = {'energy_proton': 2.0e5} #Cutoff energy in eV
+    model.settings.proton_settings = {'max_step_len': 0.2, 'min_step_len':0.05, 'max_energy_loss':1e6}
+    # Similarly, these default to True, but are shown here for clarity
+    model.settings.proton_settings['use_sph'] = False
+    model.settings.proton_settings['use_large_angle'] = False
+    model.settings.proton_settings['use_straggling'] = True
+
+    mesh = openmc.RegularMesh()
+    mesh.lower_left = (0.0, -1.0, -1.0)
+    mesh.upper_right = (xlen, 1.0, 1.0)
+    mesh.dimension = (500, 2, 2)
+
+    heating = openmc.Tally(name="proton heating")
+    heating.filters = [openmc.MeshFilter(mesh)]
+    heating.scores = ["heating"]
+
+    model.tallies = openmc.Tallies([heating])
+
+    model.run(apply_tally_results=True)
+    
+    heating_data = heating.get_reshaped_data(expand_dims=True).squeeze()
+    heating_lineout = heating_data.sum(axis=(1, 2))
+    peak = heating_lineout.max()
+    peak_ind = heating_lineout.argmax(axis=0)
+    x_centers = np.linspace(0.0, xlen, mesh.dimension[0], endpoint=False)
+    x_centers += 0.5 * (xlen / mesh.dimension[0])
+    peak_x = x_centers[peak_ind]
+
+    assert peak_x == pytest.approx(expected_peak, 1e-2)
+
+    fwhm = fwhm_c(x_centers, heating_lineout, peak)
+    assert fwhm == pytest.approx(expected_fwhm, 1e-2)
+
+def test_proton_spread_water(run_in_tmpdir):
+    """Penetration spread into water at SDP for 100MeV"""
+    model = water_block()
+    xlen = 20.0  # cm
+    expected_peak = 7.72  #cm https://physics.nist.gov/cgi-bin/Star/ap_table.pl
+    energy = 100e6 # MeV
+    expected_fwhm = 0.76  # TODO URGENT - I took this from the output. Take it from sample data instead
+    run_model_straggled(model, xlen, energy, expected_peak, expected_fwhm)
+
 
