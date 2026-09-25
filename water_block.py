@@ -21,6 +21,21 @@ water.temperature = 300 # K
 water.mean_excitation_energy = openmc.proton_data.mean_excitation_energy("water", proton_path + "mean_excitation_energies.txt") #eV
 
 materials.append(water)
+
+
+bone = openmc.Material()
+bone.add_nuclide('H1', 0.0654709, percent_type='wo')
+bone.add_nuclide('C12', 0.536944, percent_type='wo')
+bone.add_nuclide('N14', 0.0215, percent_type='wo')
+bone.add_nuclide('O16', 0.032085, percent_type='wo')
+bone.add_nuclide('F19', 0.167411, percent_type='wo')
+bone.add_nuclide('Ca40', 0.176589, percent_type='wo')
+
+bone.set_density('g/cm3', 1.45)
+bone.mean_excitation_energy = 85.9
+materials.append(bone)
+
+
 materials.export_to_xml()
 
 xlen = 20.0

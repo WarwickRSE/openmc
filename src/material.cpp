@@ -894,6 +894,8 @@ void Material::calculate_proton_xs(Particle& p) const
     p.macro_xs().total_inelastic += atom_density * micro.inelastic;
   }
 
+  // TODO URGENT - this matches the penetration depths from NIST, but does it agree with model?
+  p.macro_xs().loss_rate /= density_gpcc();
   //This converts from the partial chi calculations into the complete sigma_E including the density
   total_chi_c_fac /= total_density;
   total_chi_a_numerator /= total_density;
