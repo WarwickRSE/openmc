@@ -379,6 +379,67 @@ TEST_CASE("Proton Large Angle Scattering"){
         REQUIRE_THAT(val, Catch::Matchers::WithinRel(ref_el_ang_C12[i], eps_calc));
       }
     }
+    SECTION("Oxygen non elastic sampling"){
+      std::uint64_t seed = 5678;
+      std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
+      register_sequence(seed, random_seq);
 
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_ne_ang_O16{{0.155904, 1.77733}, {0.214461, 1.62208}, {0, 0}, {0, 0}, {0, 0.1}, {0.04473, 0}, {1, 126.528}, {0.106837, 1.68676}, {0.739901, 27.8417}};
+      for(size_t i = 0; i < energies.size(); i++){
+        double out_r, out_e;
+        O16.proton_ne_xsec.sample(energies[i], out_r, out_e, prn(&seed));
+        REQUIRE_THAT(out_r, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][0], eps_calc));
+        REQUIRE_THAT(out_e, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][1], eps_calc));
+      }
+    }
+    SECTION("Carbon non elastic sampling"){
+      std::uint64_t seed = 6789;
+      std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+      
+      std::vector<std::vector<double>> ref_ne_ang_C12{{0.171597, 1.40419}, {0.246883, 1.41405}, {0, 0.207567}, {0, 0}, {0, 0.1}, {0.04816, 0}, {1, 123.157}, {0.115362, 1.20864}, {0.925111, 38.1043}};
+      for(size_t i = 0; i < energies.size(); i++){
+        double out_r, out_e;
+        C12.proton_ne_xsec.sample(energies[i], out_r, out_e, prn(&seed));
+        REQUIRE_THAT(out_r, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][0], eps_calc));
+        REQUIRE_THAT(out_e, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][1], eps_calc));
+     }
+    }
+    SECTION("Oxygen non elastic angle and energy"){
+      std::uint64_t seed = 4321;
+      std::vector<double> random_seq{0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.67, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_ne_ang_entire_O16{{-0.505378, 0.875054}, {-0.545804, 0.860497}, {1, 0}, {1, 0}, {1, 0.140666}, {1, 0}, {1, 143.821}, {-0.375194, 0.711607}, {0.744059, 33.5311}};
+      for(size_t i = 0; i < energies.size(); i++){
+        auto vals = openmc::proton_sde::non_elastic_scatter(O16, energies[i]*openmc::proton_sde::MeVToeV, &seed);
+        std::cout<<vals.second<<" "<<vals.first*1e-6<<std::endl;
+        //NOTE: items reversed wrt test code
+        REQUIRE_THAT(vals.second, Catch::Matchers::WithinRel(ref_ne_ang_entire_O16[i][0], eps_calc));
+        REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_ne_ang_entire_O16[i][1], eps_calc));
+      }
+    }
+    SECTION("Carbon non elastic angle and energy"){
+      std::uint64_t seed = 5432;
+      std::vector<double> random_seq{0.1, 0.1, 0.1, 0.1, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.1, 0.1, 0.67, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_ne_ang_entire_C12{{-0.234352, 0.547033}, {-0.361884, 0.611241}, {0.362028, 0.238875}, {1, 0}, {1, 0.154516}, {1, 0}, {1, 145.68}, {0.0962637, 0.443222}, {0.83307, 48.0949}};
+      for(size_t i = 0; i < energies.size(); i++){
+        auto vals = openmc::proton_sde::non_elastic_scatter(C12, energies[i]*openmc::proton_sde::MeVToeV, &seed);
+        //NOTE: items reversed wrt test code
+        REQUIRE_THAT(vals.second, Catch::Matchers::WithinRel(ref_ne_ang_entire_C12[i][0], eps_calc));
+        REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_ne_ang_entire_C12[i][1], eps_calc));
+      }
+    }
+ 
 
 }
