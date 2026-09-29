@@ -189,7 +189,7 @@ TEST_CASE("Proton Cross Sections from File"){
 
     SECTION("Hydrogen Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_H1{0.0973714, 0.0973714, 0.120665, 0.105572, 0.196619};
+      std::vector<double> ref_el_H1{0.0400357, 0.0400357, 0.0462034, 0.0589672, 0.11799};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / H1.A_;
@@ -199,7 +199,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Oxygen Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_O16{0.00695712, 0.00695712, 0.0150926, 0.0256163, 0.0755137};
+      std::vector<double> ref_el_O16{0.00704476, 0.00704476, 0.0153057, 0.0259321, 0.0765291};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 1.0 * openmc::N_AVOGADRO / O16.A_;
@@ -209,7 +209,7 @@ TEST_CASE("Proton Cross Sections from File"){
     }
     SECTION("Carbon Elastic Rate"){
         // Created by test code
-      std::vector<double> ref_el_C12{0.0135181, 0.0135181, 0.0288751, 0.0479608, 0.129389};
+      std::vector<double> ref_el_C12{0.013668, 0.013668, 0.0292795, 0.0486201, 0.131744};
       for(int i = 0; i < energies.size(); i++){
         auto E = energies[i]*1e6;
         double atom_density = 2.0 * openmc::N_AVOGADRO / C12.A_;

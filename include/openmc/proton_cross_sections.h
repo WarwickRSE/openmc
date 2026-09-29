@@ -58,7 +58,7 @@ struct CS_1d {
           tmp_count++;
           tmp_val_old = tmp_val;
         } else if (lin_inter_bool) {
-          lin_inter_val = (tmp_val - cuttoff) / (tmp_val - tmp_val_old);
+          lin_inter_val = (cuttoff - tmp_val_old) / (tmp_val - tmp_val_old);
           lin_inter_bool = false;
         }
       }
