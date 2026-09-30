@@ -107,3 +107,4 @@ To make it easier to find the elements of the model, most of the proton function
 - Put Pytest reference data into a/some file(s)
 - Double check all effects
 - Check chi\_a in test code vs paper
+- Check my refactor of cm2lab to use atan2

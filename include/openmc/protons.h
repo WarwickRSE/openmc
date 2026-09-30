@@ -341,9 +341,9 @@ namespace openmc{
     //! \param u A uniform random variate in [0,1]
     //! \param u2 A uniform random variate in [0,1]
     inline void sample_nonelastic_collision(const openmc::Nuclide & nuclide, double &e, double &alpha, double u, double u2){
-      double out_rvalue, out_energy_cm;
       double a = nuclide.A_, z = nuclide.Z_;
-      nuclide.proton_ne_xsec.sample(e, out_rvalue, out_energy_cm, u);
+      auto sample = nuclide.proton_ne_xsec.sample(e, u);
+      const double out_energy_cm = sample.first, out_rvalue = sample.second;
       double eps_a = a * e / (a + 1);
       double eps_b = (a + 1) * out_energy_cm / a;
       double e_a = eps_a + s(a, z);
@@ -353,7 +353,6 @@ namespace openmc{
       double aval = 0.04 * x1 + 1.8 * 1e-6 * pow(x1, 3) + 6.7 * 1e-7 * pow(x3, 4);
       double cdfc2 = out_rvalue * cosh(aval) - sinh(aval);
       double cdfc1 = 2 * sinh(aval);
-      //double u2 = gsl_rng_uniform(gen);
       double z1 = cdfc1 * u2 + cdfc2;
       double z2 =
           (z1 + sqrt(pow(z1, 2) - pow(out_rvalue, 2) + 1)) / (out_rvalue + 1);

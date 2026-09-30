@@ -435,10 +435,9 @@ TEST_CASE("Proton Large Angle Scattering"){
 
       std::vector<std::vector<double>> ref_ne_ang_O16{{0.155904, 1.77733}, {0.214461, 1.62208}, {0, 0}, {0, 0}, {0, 0.1}, {0.04473, 0}, {1, 126.528}, {0.106837, 1.68676}, {0.739901, 27.8417}};
       for(size_t i = 0; i < energies.size(); i++){
-        double out_r, out_e;
-        O16.proton_ne_xsec.sample(energies[i], out_r, out_e, prn(&seed));
-        REQUIRE_THAT(out_r, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][0], eps_calc));
-        REQUIRE_THAT(out_e, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][1], eps_calc));
+        auto sample = O16.proton_ne_xsec.sample(energies[i], prn(&seed));
+        REQUIRE_THAT(sample.second, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][0], eps_calc));
+        REQUIRE_THAT(sample.first, Catch::Matchers::WithinRel(ref_ne_ang_O16[i][1], eps_calc));
       }
     }
     SECTION("Carbon non elastic sampling"){
@@ -450,10 +449,9 @@ TEST_CASE("Proton Large Angle Scattering"){
       
       std::vector<std::vector<double>> ref_ne_ang_C12{{0.171597, 1.40419}, {0.246883, 1.41405}, {0, 0.207567}, {0, 0}, {0, 0.1}, {0.04816, 0}, {1, 123.157}, {0.115362, 1.20864}, {0.925111, 38.1043}};
       for(size_t i = 0; i < energies.size(); i++){
-        double out_r, out_e;
-        C12.proton_ne_xsec.sample(energies[i], out_r, out_e, prn(&seed));
-        REQUIRE_THAT(out_r, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][0], eps_calc));
-        REQUIRE_THAT(out_e, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][1], eps_calc));
+        auto sample = C12.proton_ne_xsec.sample(energies[i], prn(&seed));
+        REQUIRE_THAT(sample.second, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][0], eps_calc));
+        REQUIRE_THAT(sample.first, Catch::Matchers::WithinRel(ref_ne_ang_C12[i][1], eps_calc));
      }
     }
     SECTION("Oxygen non elastic angle and energy"){
