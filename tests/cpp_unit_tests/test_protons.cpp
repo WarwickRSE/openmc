@@ -337,48 +337,95 @@ TEST_CASE("Proton Large Angle Scattering"){
     C12.Z_ = 6;
     C12.A_ = 12.011;
 
-    SECTION("Hydrogen elastic rate and angle"){
+    SECTION("Hydrogen elastic sampling"){
       std::uint64_t seed = 1234;
       std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
       register_sequence(seed, random_seq);
 
       std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
 
-      std::vector<double> ref_el_ang_H1{1.44996, 1.53925, 1.53162, 1.55071, 0.04, 1.54993, 0.04, 1.37805, 0.540784};
+      std::vector<double> ref_el_ang_H1{0.958581, 0.962766, 0.37857, 1.11851, 0.434487, 1.10332, 0.04, 0.962499, 0.308092};
+      //{1.44996, 1.53925, 1.53162, 1.55071, 0.04, 1.54993, 0.04, 1.37805, 0.540784};
       for(size_t i = 0; i < energies.size(); i++){
-        auto cos2 = openmc::proton_sde::rutherford_elastic_scatter(H1, energies[i]*openmc::proton_sde::MeVToeV, &seed);
-        auto val = acos(cos2);
-        REQUIRE_THAT(val, Catch::Matchers::WithinRel(ref_el_ang_H1[i], eps_calc));
+        auto alpha = H1.proton_el_xsec.sample(energies[i], prn(&seed));
+        REQUIRE_THAT(alpha, Catch::Matchers::WithinRel(ref_el_ang_H1[i], eps_calc));
       }
     }
-    SECTION("Oxygen elastic rate and angle"){
+    SECTION("Oxygen elastic sampling"){
       std::uint64_t seed = 2345;
       std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
       register_sequence(seed, random_seq);
 
       std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
 
-      std::vector<double> ref_el_ang_O16{0.328358, 0.374877, 0.0564652, 3.14159, 0.04, 3.14159, 0.04, 0.260273, 0.0592945};
+      std::vector<double> ref_el_ang_O16{0.335586, 0.376031, 0.163273, 3.14159, 0.601333, 3.14159, 0.04, 0.265345, 0.0606393};
+      //{0.328358, 0.374877, 0.0564652, 3.14159, 0.04, 3.14159, 0.04, 0.260273, 0.0592945};
       for(size_t i = 0; i < energies.size(); i++){
-        auto cos2 = openmc::proton_sde::rutherford_elastic_scatter(O16, energies[i]*openmc::proton_sde::MeVToeV, &seed);
-        auto val = acos(cos2);
-        REQUIRE_THAT(val, Catch::Matchers::WithinRel(ref_el_ang_O16[i], eps_calc));
+        auto alpha = O16.proton_el_xsec.sample(energies[i], prn(&seed));
+        REQUIRE_THAT(alpha, Catch::Matchers::WithinRel(ref_el_ang_O16[i], eps_calc));
       }
     }
-    SECTION("Carbon elastic rate and angle"){
+    SECTION("Carbon elastic sampling"){
       std::uint64_t seed = 3456;
       std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
       register_sequence(seed, random_seq);
 
       std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
 
-      std::vector<double> ref_el_ang_C12{0.349714, 0.395738, 0.0563128, 3.14159, 0.04, 3.14159, 0.04, 0.276185, 0.0763119};
+      std::vector<double> ref_el_ang_C12{0.354868, 0.394815, 0.141732, 3.14159, 0.55947, 3.14159, 0.04, 0.276945, 0.0738311};
+      //{0.349714, 0.395738, 0.0563128, 3.14159, 0.04, 3.14159, 0.04, 0.276185, 0.0763119};
       for(size_t i = 0; i < energies.size(); i++){
-        auto cos2 = openmc::proton_sde::rutherford_elastic_scatter(C12, energies[i]*openmc::proton_sde::MeVToeV, &seed);
-        auto val = acos(cos2);
-        REQUIRE_THAT(val, Catch::Matchers::WithinRel(ref_el_ang_C12[i], eps_calc));
+        auto alpha = C12.proton_el_xsec.sample(energies[i], prn(&seed));
+        REQUIRE_THAT(alpha, Catch::Matchers::WithinRel(ref_el_ang_C12[i], eps_calc));
       }
     }
+    SECTION("Hydrogen elastic angle"){
+      std::uint64_t seed = 12341;
+      std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_el_ang_entire_H1{{0.958581, 32.408}, {0.962766, 23.5972}, {0.37857, 4.58002}, {1.11851, 0.197276}, {0.434487, 0.824133}, {1.10332, 31.3802}, {0.04, 159.725}, {0.962499, 47.2617}, {0.308092, 135.329}};
+      for(size_t i = 0; i < energies.size(); i++){
+        // NOTE: this impl. has already selected a Nuclide by this point
+        // Therefore we should only need 1 random roll per call
+        auto vals = openmc::proton_sde::rutherford_elastic_scatter(H1, energies[i]*openmc::proton_sde::MeVToeV, &seed);
+        REQUIRE_THAT(acos(vals.second), Catch::Matchers::WithinRel(ref_el_ang_entire_H1[i][0], eps_calc));
+        REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_el_ang_entire_H1[i][1], eps_calc));
+      }
+    }
+    SECTION("Oxygen elastic angle"){
+      std::uint64_t seed = 23451;
+      std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_el_ang_entire_O16{{0.335586, 99.2683}, {0.376031, 72.3406}, {0.163273, 5.29117}, {3.14159, 0.778443}, {0.601333, 0.978292}, {3.14159, 122.257}, {0.04, 159.983}, {0.265345, 149.293}, {0.0606393, 149.963}};
+      for(size_t i = 0; i < energies.size(); i++){
+        // NOTE: this impl. has already selected a Nuclide by this point
+        // Therefore we should only need 1 random roll per call
+        auto vals = openmc::proton_sde::rutherford_elastic_scatter(O16, energies[i]*openmc::proton_sde::MeVToeV, &seed);
+        REQUIRE_THAT(acos(vals.second), Catch::Matchers::WithinRel(ref_el_ang_entire_O16[i][0], eps_calc));
+        REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_el_ang_entire_O16[i][1], eps_calc));
+      }
+    }
+    SECTION("Carbon elastic angle"){
+      std::uint64_t seed = 34561;
+      std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
+      register_sequence(seed, random_seq);
+
+      std::vector<double> energies{100.0, 73.0, 5.3, 1.0, 1.0, 160.0, 160.0, 150.0, 150.0};
+
+      std::vector<std::vector<double>> ref_el_ang_entire_C12{{0.354868, 98.9132}, {0.394815, 72.0349}, {0.141732, 5.29113}, {3.14159, 0.716088}, {0.55947, 0.974907}, {3.14159, 111.884}, {0.04, 159.977}, {0.276945, 148.976}, {0.0738311, 149.927}};
+      for(size_t i = 0; i < energies.size(); i++){
+        auto vals = openmc::proton_sde::rutherford_elastic_scatter(C12, energies[i]*openmc::proton_sde::MeVToeV, &seed);
+        REQUIRE_THAT(acos(vals.second), Catch::Matchers::WithinRel(ref_el_ang_entire_C12[i][0], eps_calc));
+        REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_el_ang_entire_C12[i][1], eps_calc));
+      }
+    }
+
     SECTION("Oxygen non elastic sampling"){
       std::uint64_t seed = 5678;
       std::vector<double> random_seq{0.1, 0.1, 0.5, 0.0, 1.0, 0.0, 1.0, 0.1, 0.67};
@@ -419,7 +466,6 @@ TEST_CASE("Proton Large Angle Scattering"){
       std::vector<std::vector<double>> ref_ne_ang_entire_O16{{-0.505378, 0.875054}, {-0.545804, 0.860497}, {1, 0}, {1, 0}, {1, 0.140666}, {1, 0}, {1, 143.821}, {-0.375194, 0.711607}, {0.744059, 33.5311}};
       for(size_t i = 0; i < energies.size(); i++){
         auto vals = openmc::proton_sde::non_elastic_scatter(O16, energies[i]*openmc::proton_sde::MeVToeV, &seed);
-        std::cout<<vals.second<<" "<<vals.first*1e-6<<std::endl;
         //NOTE: items reversed wrt test code
         REQUIRE_THAT(vals.second, Catch::Matchers::WithinRel(ref_ne_ang_entire_O16[i][0], eps_calc));
         REQUIRE_THAT(vals.first*openmc::proton_sde::eVToMeV, Catch::Matchers::WithinRel(ref_ne_ang_entire_O16[i][1], eps_calc));

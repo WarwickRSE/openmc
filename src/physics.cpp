@@ -173,7 +173,7 @@ void sample_proton_reaction(Particle&p){
       //Perform the scattering - returns a pair, updated E and cos(angle)
       auto tmp = proton_sde::non_elastic_scatter(nuclide, p.E(), p.current_seed());
       //Cosine angle to apply below
-      scat_cos2 = tmp.second;
+      scat_cos2 = tmp.second; // TODO - is this alpha or cos alpha??
       //Updated energy
       p.E() = tmp.first;
     }else{
@@ -181,7 +181,10 @@ void sample_proton_reaction(Particle&p){
       i_nuclide = sample_nuclide(p, CType::elastic);
       const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
       //Calculate scattering angle
-      scat_cos2 = proton_sde::rutherford_elastic_scatter(nuclide, p.E(), p.current_seed());
+      auto tmp = proton_sde::rutherford_elastic_scatter(nuclide, p.E(), p.current_seed());
+      scat_cos2 = tmp.second;
+      //Updated energy
+      p.E() = tmp.first;
     }
     // Now Applying large angle scatter
     // NOTE: rotat_angle function picks a random phi for us if not specified

@@ -278,15 +278,34 @@ namespace openmc{
         return{cos(direction_out_1), direction_out_2};
     }
 
+
+    inline double cm_to_lab_energy(const double nuc_A, const double alpha, const double e) {
+      double mtcsq = nuc_A * mpcsq;
+      double E1 = mpcsq + e;
+      double p1 = std::sqrt(E1 * E1 - mpcsq * mpcsq);
+      double u = p1 / (E1 + mtcsq);
+      double invmass = std::sqrt(mpcsq * mpcsq + mtcsq * mtcsq + 2 * E1 * mtcsq);
+      double gamma_u = (E1 + mtcsq) / invmass;
+      double EC = (E1 * mtcsq + mpcsq * mpcsq) / invmass;
+      double TanL = tan(alpha);
+      double C1 = u / std::sqrt(1 - (mpcsq * mpcsq / (EC * EC)));
+      double CosCM = cos(acos(-(TanL * gamma_u * C1) /
+                            std::sqrt(TanL * TanL * gamma_u * gamma_u + 1)) -
+                       atan(1 / (TanL * gamma_u)));
+      return gamma_u * (EC + u * std::sqrt(EC * EC - mpcsq * mpcsq) * CosCM) - mpcsq;
+    }
     //! Evaluate a single elastic scatter event
     //!
     //! Evaluate an elastic scatter event for a proton against the given nuclide at the given energy
     //! \param nuclide The Nuclide to collide against
     //! \param e Energy of incident particle
     //! \param seed Current seed for RNG
-    inline double rutherford_elastic_scatter(const Nuclide & nuclide, double e, std::uint64_t * seed){
+    inline std::pair<double, double> rutherford_elastic_scatter(const Nuclide & nuclide, double e, std::uint64_t * seed){
       auto alpha = nuclide.proton_el_xsec.sample(e*eVToMeV, prn(seed));
-      return cos(alpha); //TODO URGENT cm to lab??
+
+      //Now converting to lab frame
+      double out_e = cm_to_lab_energy(nuclide.A_, alpha, e*eVToMeV);
+      return {out_e*MeVToeV, cos(alpha)};
     }
 
     //! Compute separation energies for incident particle
