@@ -15,12 +15,16 @@
 #include "openmc/string_utils.h"
 #include "openmc/thermal.h"
 
+#include "openmc/protons.h"
+#include "openmc/proton_cross_sections.h"
+
 #include <fmt/core.h>
 
 #include "openmc/tensor.h"
 
 #include <algorithm> // for sort, min_element
 #include <cassert>
+#include <cstdlib> // for getenv
 #include <string> // for to_string, stoi
 
 namespace openmc {
@@ -30,8 +34,8 @@ namespace openmc {
 //==============================================================================
 
 namespace data {
-array<double, 4> energy_min {0.0, 0.0, 0.0, 0.0};
-array<double, 4> energy_max {INFTY, INFTY, INFTY, INFTY};
+array<double, 5> energy_min {0.0, 0.0, 0.0, 0.0, 0.0};
+array<double, 5> energy_max {INFTY, INFTY, INFTY, INFTY, INFTY};
 double temperature_min {INFTY};
 double temperature_max {0.0};
 std::unordered_map<std::string, int> nuclide_map;
@@ -1138,6 +1142,14 @@ extern "C" int openmc_load_nuclide(const char* name, const double* temps, int n)
     int i_nuclide = data::nuclide_map.at(name);
     if (settings::temperature_multipole)
       read_multipole_data(i_nuclide);
+
+    if(settings::proton_transport){
+      Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+      char* proton_data_path = std::getenv("OPENMC_PROTON_DATA");
+      if (proton_data_path) {
+        read_proton_data(&nuclide.proton_el_rate, &nuclide.proton_ne_rate, &nuclide.proton_el_xsec, &nuclide.proton_ne_xsec, proton_data_path, name);
+      }
+    }
 
     // Read elemental data, if necessary
     if (settings::photon_transport) {

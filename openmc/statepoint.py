@@ -97,6 +97,8 @@ class StatePoint:
         Working directory for simulation
     photon_transport : bool
         Indicate whether photon transport is active
+    proton_transport : bool
+        Indicate whether proton transport is active
     run_mode : str
         Simulation run mode, e.g. 'eigenvalue'
     runtime : dict
@@ -349,6 +351,10 @@ class StatePoint:
     @property
     def photon_transport(self):
         return self._f.attrs['photon_transport'] > 0
+
+    @property
+    def proton_transport(self):
+        return self._f.attrs['proton_transport'] > 0
 
     @property
     def run_mode(self):

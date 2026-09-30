@@ -8,6 +8,7 @@ set(TEST_NAMES
   test_mesh
   test_region
   test_tensor
+  test_protons
   # Add additional unit test files here
 )
 

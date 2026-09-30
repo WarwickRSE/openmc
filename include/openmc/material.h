@@ -208,6 +208,8 @@ public:
 
   unique_ptr<Bremsstrahlung> ttb_;
 
+  double mean_excitation_energy_; //!< Averaged MEE for the material. This has to be setup via the xml input
+
 private:
   //----------------------------------------------------------------------------
   // Private methods
@@ -221,6 +223,7 @@ private:
   //! Normalize density
   void normalize_density();
 
+  void calculate_proton_xs(Particle& p) const;
   void calculate_neutron_xs(Particle& p) const;
   void calculate_photon_xs(Particle& p) const;
 

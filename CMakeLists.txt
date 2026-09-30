@@ -404,6 +404,7 @@ list(APPEND libopenmc_SOURCES
   src/plot.cpp
   src/position.cpp
   src/progress_bar.cpp
+  src/proton_cross_sections.cpp
   src/random_dist.cpp
   src/random_lcg.cpp
   src/random_ray/random_ray_simulation.cpp

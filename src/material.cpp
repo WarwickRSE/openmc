@@ -28,6 +28,8 @@
 #include "openmc/thermal.h"
 #include "openmc/xml_interface.h"
 
+#include "openmc/protons.h"
+
 namespace openmc {
 
 //==============================================================================
@@ -57,6 +59,11 @@ Material::Material(pugi::xml_node node)
 
   if (check_for_node(node, "name")) {
     name_ = get_node_value(node, "name");
+  }
+
+  //PROTON TRANSPORT - Mean excitation energy
+  if (check_for_node(node, "mean_excitation_energy")) {
+    mean_excitation_energy_ = std::stod(get_node_value(node, "mean_excitation_energy"));
   }
 
   if (check_for_node(node, "cfg")) {
@@ -817,14 +824,85 @@ void Material::calculate_xs(Particle& p) const
   p.macro_xs().absorption = 0.0;
   p.macro_xs().fission = 0.0;
   p.macro_xs().nu_fission = 0.0;
+  p.macro_xs().total_elastic = 0.0;
+  p.macro_xs().total_inelastic = 0.0;
 
   if (p.type().is_neutron()) {
     this->calculate_neutron_xs(p);
   } else if (p.type().is_photon()) {
     this->calculate_photon_xs(p);
+  } else if (p.type() == ParticleType::proton()) {
+    p.macro_xs().loss_rate = 0.0;
+    p.macro_xs().energy_straggling = 0.0;
+    this->calculate_proton_xs(p);
   }
 }
 
+//PROTON_TRANSPORT
+/* Computes the total material cross-sections and rates for the processes in the SDE model. This includes rutherford-and-elastic scattering, inelastic scattering, small-angle Moliere scattering, Bethe-Bloch energy loss, and energy straggling. All material dependency is included by this function, and the rates _depend strongly on incident particle energy E_
+ */
+void Material::calculate_proton_xs(Particle& p) const
+{
+
+  // Temporaries for material sums
+  double total_density = 0.0;
+  double total_chi_c_fac = 0.0, total_chi_a_numerator = 0.0;
+  // Add contribution from each nuclide in material
+  for (int i = 0; i < nuclide_.size(); ++i) {
+    // ======================================================================
+    // CALCULATE MICROSCOPIC CROSS SECTION
+
+    // Get nuclide index
+    int i_nuclide = nuclide_[i];
+
+    // Update microscopic cross section for this nuclide
+    // Mean Excitation Energy enters non-linearly into the equation per nuclide!!
+    p.update_proton_xs(i_nuclide, mean_excitation_energy_);
+    auto& micro = p.proton_xs(i_nuclide);
+    const double A = settings::run_CE ? data::nuclides[i_nuclide]->A_ : 1.0;
+
+    // Copy atom density of nuclide in material
+    double atom_density = this->atom_density(i, p.density_mult());
+
+    // Add contributions to cross sections
+    //Total _true collisional_ cross section
+    p.macro_xs().total += atom_density * micro.total;
+    // Not used here, but retain summation as it exists
+    p.macro_xs().absorption += atom_density * micro.absorption;
+
+    //Rates here need to be multiplied by the correct form of the partial density
+    //and converted from barns if neccessary
+    // Total energy loss
+    p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
+
+    //Energy straggling- summing per-nuclide contribution
+    // THIS IS NOT in barns
+    p.macro_xs().energy_straggling += micro.energy_straggling;
+    //
+    total_density += atom_density * A;
+
+    //Summing the partial factors for Moliere small-angle scattering
+    // Chi_c contains the mass_fraction, chi_a does not. Sum 'A*frac' and divide below by total_density
+    //This sums Z(Z+1)/A, so _part_ of chi_c**2 and the denominator for chi_a**2
+    total_chi_c_fac += micro.moliere_precomp.first * atom_density * A;
+    //This sums the numerator for log(chi_a**2)
+    // TODO URGENT - is the paper or the test-code right about this line?
+    total_chi_a_numerator += micro.moliere_precomp.second * atom_density * A;
+
+    // True collisional cross-sections
+    p.macro_xs().total_elastic += atom_density * micro.elastic;
+    p.macro_xs().total_inelastic += atom_density * micro.inelastic;
+  }
+
+  // TODO URGENT - this matches the penetration depths from NIST, but does it agree with model?
+  p.macro_xs().loss_rate /= density_gpcc();
+  //This converts from the partial chi calculations into the complete sigma_E including the density
+  total_chi_c_fac /= total_density;
+  total_chi_a_numerator /= total_density;
+  //Storing the factors as we can't make a final evaluation until we know the distance
+  p.macro_xs().moliere = std::make_tuple(total_chi_c_fac, total_chi_a_numerator, density_gpcc());
+
+}
 void Material::calculate_neutron_xs(Particle& p) const
 {
   // Find energy index on energy grid

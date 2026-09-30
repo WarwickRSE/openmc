@@ -34,6 +34,7 @@ from openmc.plotter import *
 from openmc.search import *
 from openmc.polynomial import *
 from openmc.tracks import *
+from . import proton_data
 from .config import *
 
 # Import a few names from the model module

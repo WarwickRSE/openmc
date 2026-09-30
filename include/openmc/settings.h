@@ -50,6 +50,15 @@ struct CollisionTrackConfig {
   int64_t max_files {1}; //!< Maximum number of collision track files
 };
 
+struct ProtonSettings {
+  bool use_sph = true;  //!< Use spherical Brownian motion for small-angle scatter
+  bool use_large_angle = true;  //!< Apply large angle collisions
+  bool use_straggling = true;  //!< Apply random energy straggling correction
+  double max_step_len {0.2};     //!< Maximum condensed-history step length [cm]
+  double min_step_len {0.05};    //!< Minimum condensed-history step length [cm]
+  double max_energy_loss {10000.0}; //!< Maximum energy loss per step [eV/cm]
+};
+
 //==============================================================================
 // Global variable declarations
 //==============================================================================
@@ -77,6 +86,7 @@ extern "C" bool output_summary;      //!< write summary.h5?
 extern bool output_tallies;          //!< write tallies.out?
 extern bool particle_restart_run;    //!< particle restart run?
 extern "C" bool photon_transport;    //!< photon transport turned on?
+extern "C" bool proton_transport;    //!< proton transport turned on?
 extern bool atomic_relaxation;       //!< atomic relaxation enabled?
 extern "C" bool reduce_tallies;      //!< reduce tallies at end of batch?
 extern bool res_scat_on;             //!< use resonance upscattering method?
@@ -140,9 +150,9 @@ extern int64_t
 extern int max_particle_events; //!< Maximum number of particle events
 extern ElectronTreatment
   electron_treatment; //!< how to treat secondary electrons
-extern array<double, 4>
+extern array<double, 5>
   energy_cutoff; //!< Energy cutoff in [eV] for each particle type
-extern array<double, 4>
+extern array<double, 5>
   time_cutoff; //!< Time cutoff in [s] for each particle type
 extern int
   ifp_n_generation; //!< Number of generation for Iterated Fission Probability
@@ -169,6 +179,7 @@ extern std::unordered_set<int>
 extern std::unordered_set<int>
   source_write_surf_id; //!< Surface ids where sources will be written
 extern CollisionTrackConfig collision_track_config;
+extern ProtonSettings proton_settings;
 extern double source_rejection_fraction; //!< Minimum fraction of source sites
                                          //!< that must be accepted
 extern double free_gas_threshold;        //!< Threshold multiplier for free gas

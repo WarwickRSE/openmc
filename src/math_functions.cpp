@@ -959,4 +959,5 @@ void get_energy_index(
   }
 }
 
+
 } // namespace openmc

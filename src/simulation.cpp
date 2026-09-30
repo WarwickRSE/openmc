@@ -742,8 +742,8 @@ void calculate_work(int64_t n_particles)
 void initialize_data()
 {
   // Determine minimum/maximum energy for incident neutron/photon data
-  data::energy_max = {INFTY, INFTY, INFTY, INFTY};
-  data::energy_min = {0.0, 0.0, 0.0, 0.0};
+  data::energy_max = {INFTY, INFTY, INFTY, INFTY, INFTY};
+  data::energy_min = {0.0, 0.0, 0.0, 0.0, 0.0};
 
   for (const auto& nuc : data::nuclides) {
     if (nuc->grid_.size() >= 1) {
@@ -869,7 +869,8 @@ void transport_history_based_single_particle(Particle& p)
       p.event_advance();
     }
     if (p.alive()) {
-      if (p.collision_distance() > p.boundary().distance()) {
+      // PROTON_TRANSPORT - decide whether the next update is an event or a material boundary
+      if (p.transport_distance() > p.boundary().distance()) {
         p.event_cross_surface();
       } else if (p.alive()) {
         p.event_collide();

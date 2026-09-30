@@ -34,6 +34,8 @@
 #include <algorithm> // for max, min, max_element
 #include <cmath>     // for sqrt, exp, log, abs, copysign
 
+#include "openmc/protons.h"
+
 namespace openmc {
 
 //==============================================================================
@@ -59,6 +61,9 @@ void collision(Particle& p)
     break;
   case PDG_POSITRON:
     sample_positron_reaction(p);
+    break;
+  case PDG_PROTON:
+    sample_proton_reaction(p);
     break;
   default:
     fatal_error("Unsupported particle PDG for collision sampling.");
@@ -87,7 +92,7 @@ void collision(Particle& p)
     std::string msg;
     if (p.event() == TallyEvent::KILL) {
       msg = fmt::format("    Killed. Energy = {} eV.", p.E());
-    } else if (p.type().is_neutron()) {
+    } else if (p.type().is_neutron() || p.type().is_proton()) {
       msg = fmt::format("    {} with {}. Energy = {} eV.",
         reaction_name(p.event_mt()), data::nuclides[p.event_nuclide()]->name_,
         p.E());
@@ -100,6 +105,97 @@ void collision(Particle& p)
     }
     write_message(msg, 1);
   }
+}
+
+// PROTON_TRANSPORT
+
+/** Proton energy straggling calculatation
+ * 
+ * Calculates the energy straggling effect for the current particle, Zeta2 in paper. Multiply the summed per-nuclide contributions with an energy dependent prefactor. Distance is then multiplied in. Finally, we add a random Gaussian draw.
+ */
+double proton_energy_straggle(Particle & p, double distance){
+
+    return std::sqrt(p.macro_xs().energy_straggling * proton_sde::energy_straggling_update_sq(p.E()) * distance) * normal_variate(0.0, 1.0, p.current_seed()) * proton_sde::MeVToeV;
+}
+
+/** Calculate small angle scattering
+ * 
+ * Evaluates the integrated small angle scattering during the initial transport phase.
+*/
+void proton_small_angle_scatter(Particle &p){
+
+  //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
+
+  //Applying Spherical brownian motion. The result of this is the NEW direction in spherical polar co-ordinates
+  //Start from the current direction
+  std::vector<double> direction_in = {p.u().x, p.u().y, p.u().z};
+  auto moliere = proton_sde::moliere_transform(p.E(), p.macro_xs().moliere, p.transport_distance());
+  auto dir = proton_sde::spherical_bm(p.transport_distance(), p.E(), direction_in, moliere, p.current_seed());
+
+  //Constructing new direction after spherical BM
+  const double sin_theta = std::sqrt(1.0 - dir.first * dir.first);
+  p.u() = {sin_theta * std::cos(dir.second),
+         sin_theta * std::sin(dir.second),
+         dir.first};
+  //Calculate the 'mu' from this part
+  p.mu() = p.u_last().dot(p.u());
+
+}
+
+/** Sample a single collision-like event for given particle
+ *
+ * This applies ONLY the (rare) elastic or inelastic collision effects if one should occur. This routine potentially updates the direction and energy of the particle.
+ * 
+ * Any secondary emissions would be added here if such an extension were considered
+*/
+void sample_proton_reaction(Particle&p){
+
+  if(!settings::proton_settings.use_large_angle) return;
+  //The distance to travel is 'transport_distance' - this is the smaller of the step for condensed history and the distance to next true collision
+
+  //Tackle large-angle single collisions
+  //This will be the cosine of the polar scattering angle. It is NOT relative to the current direction, it is a rotation. We will sample a corresponding phi below
+  double scat_cos2 = 1.0;
+  //Decide if it was elastic or inelastic.
+ 
+  //This will be the index of the nuclide to collide with. Note that the partial cross-sections are different in the two cases.
+  int i_nuclide = 0;
+
+  //Deciding whether to do an elastic, inelastic or neither, based on the MFP for each type and the transport_distance
+  //NOTE: we could put this check higher up, but this is the first point where we know we're a proton. And we also want the 'kill' logic to fire after every energy loss, not only collisions.
+  if(p.collision_distance() <= p.transport_distance()){
+    //We should do one or the other - decide which
+    auto ran = prn(p.current_seed()); //Uniform random - compare with threshold to chose which
+    if(ran < p.macro_xs().total_inelastic / p.macro_xs().total){
+      //Inelastic scattering. Sample a nuclide type
+      i_nuclide = sample_nuclide(p, CType::inelastic);
+      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+      //Perform the scattering - returns a pair, updated E and cos(angle)
+      auto tmp = proton_sde::non_elastic_scatter(nuclide, p.E(), p.current_seed());
+      //Cosine angle to apply below
+      scat_cos2 = tmp.second; // TODO - is this alpha or cos alpha??
+      //Updated energy
+      p.E() = tmp.first;
+    }else{
+      //Elastic scattering case - sample a nuclide type
+      i_nuclide = sample_nuclide(p, CType::elastic);
+      const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+      //Calculate scattering angle
+      auto tmp = proton_sde::rutherford_elastic_scatter(nuclide, p.E(), p.current_seed());
+      scat_cos2 = tmp.second;
+      //Updated energy
+      p.E() = tmp.first;
+    }
+    // Now Applying large angle scatter
+    // NOTE: rotat_angle function picks a random phi for us if not specified
+    p.u() = rotate_angle(p.u(), scat_cos2, nullptr, p.current_seed());
+    p.mu() = p.u_last().dot(p.u()); // Effectively adds this rotation to the small-angle one
+  }
+
+  //Storing other information about what happened here
+  p.event_nuclide() = i_nuclide;
+  p.event() = TallyEvent::SCATTER; //TODO - what about if we did NOT scatter?
+
 }
 
 void sample_neutron_reaction(Particle& p)
@@ -502,15 +598,26 @@ void sample_positron_reaction(Particle& p)
   p.event() = TallyEvent::ABSORB;
 }
 
-int sample_nuclide(Particle& p)
+int sample_nuclide(Particle& p, CType type)
 {
   // Sample cumulative distribution function
-  double cutoff = prn(p.current_seed()) * p.macro_xs().total;
-
+  double cutoff;
+  if(p.type().is_proton()){
+    if(type == CType::total){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total;
+    }else if(type == CType::elastic){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total_elastic;
+    }else if(type == CType::inelastic){
+      cutoff = prn(p.current_seed()) * p.macro_xs().total_inelastic;
+    }else{
+      throw std::runtime_error("Bad collision type for proton!");
+    }
+  }else{
+    cutoff = prn(p.current_seed()) * p.macro_xs().total;
+  }
   // Get pointers to nuclide/density arrays
   const auto& mat {model::materials[p.material()]};
   int n = mat->nuclide_.size();
-
   double prob = 0.0;
   for (int i = 0; i < n; ++i) {
     // Get atom density
@@ -518,7 +625,18 @@ int sample_nuclide(Particle& p)
     double atom_density = mat->atom_density(i, p.density_mult());
 
     // Increment probability to compare to cutoff
-    prob += atom_density * p.neutron_xs(i_nuclide).total;
+    if(p.type().is_proton()){
+      // Special case for SDE model
+      if(type == CType::total){
+        prob += atom_density * p.proton_xs(i_nuclide).total;
+      }else if(type == CType::elastic){
+        prob += atom_density * p.proton_xs(i_nuclide).elastic;
+      }else if(type == CType::inelastic){
+        prob += atom_density * p.proton_xs(i_nuclide).inelastic;
+      }
+    }else{
+      prob += atom_density * p.neutron_xs(i_nuclide).total;
+    }
     if (prob >= cutoff)
       return i_nuclide;
   }

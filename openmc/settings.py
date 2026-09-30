@@ -77,8 +77,8 @@ class Settings:
         Dictionary defining weight cutoff, energy cutoff and time cutoff. The
         dictionary may have the following keys, 'weight', 'weight_avg',
         'survival_normalization', 'energy_neutron', 'energy_photon',
-        'energy_electron', 'energy_positron', 'time_neutron', 'time_photon',
-        'time_electron', and 'time_positron'. Value for 'weight' should be a
+        'energy_electron', 'energy_positron', 'energy_proton', 'time_neutron',
+        'time_photon', 'time_electron', and 'time_positron'. Value for 'weight' should be a
         float indicating weight cutoff below which particle undergo Russian
         roulette. Value for 'weight_avg' should be a float indicating weight
         assigned to particles that are not killed after Russian roulette. Value
@@ -183,6 +183,18 @@ class Settings:
         Number of particles per generation
     photon_transport : bool
         Whether to use photon transport.
+    proton_transport : bool
+        Whether to use proton transport.
+    proton_settings : dict
+        Options controlling proton condensed-history transport. Acceptable
+        keys are:
+
+        :use_sph: Use spherical Brownian motion for small-angle scatter. (bool)
+        :use_large_angle: Apply large angle collisions. (bool)
+        :use_straggling: Apply random energy straggling correction. (bool)
+        :max_step_len: Maximum step length per condensed-history step [cm]. (float)
+        :min_step_len: Minimum step length per condensed-history step [cm]. (float)
+        :max_energy_loss: Maximum energy loss per step [eV/cm]. (float)
     plot_seed : int
        Initial seed for randomly generated plot colors.
     ptables : bool
@@ -421,6 +433,8 @@ class Settings:
         self._confidence_intervals = None
         self._electron_treatment = None
         self._photon_transport = None
+        self._proton_transport = None
+        self._proton_settings = {}
         self._atomic_relaxation = None
         self._plot_seed = None
         self._ptables = None
@@ -711,6 +725,33 @@ class Settings:
     def photon_transport(self, photon_transport: bool):
         cv.check_type('photon transport', photon_transport, bool)
         self._photon_transport = photon_transport
+
+    @property
+    def proton_transport(self) -> bool:
+        return self._proton_transport
+
+    @proton_transport.setter
+    def proton_transport(self, proton_transport: bool):
+        cv.check_type('proton transport', proton_transport, bool)
+        self._proton_transport = proton_transport
+
+    @property
+    def proton_settings(self) -> dict:
+        return self._proton_settings
+
+    @proton_settings.setter
+    def proton_settings(self, proton_settings: dict):
+        cv.check_type('proton settings', proton_settings, Mapping)
+        bool_keys = ('use_sph', 'use_large_angle', 'use_straggling')
+        real_keys = ('max_step_len', 'min_step_len', 'max_energy_loss')
+        for key, value in proton_settings.items():
+            cv.check_value('proton_settings key', key, bool_keys + real_keys)
+            if key in bool_keys:
+                cv.check_type(f'proton settings {key}', value, bool)
+            else:
+                cv.check_type(f'proton settings {key}', value, Real)
+                cv.check_greater_than(f'proton settings {key}', value, 0.0)
+        self._proton_settings = proton_settings
 
     @property
     def uniform_source_sampling(self) -> bool:
@@ -1149,7 +1190,7 @@ class Settings:
             elif key == 'survival_normalization':
                 cv.check_type('survival normalization', cutoff[key], bool)
             elif key in ['energy_neutron', 'energy_photon', 'energy_electron',
-                         'energy_positron']:
+                         'energy_positron', 'energy_proton']:
                 cv.check_type('energy cutoff', cutoff[key], Real)
                 cv.check_greater_than('energy cutoff', cutoff[key], 0.0)
             else:
@@ -1701,6 +1742,21 @@ class Settings:
             element = ET.SubElement(root, "photon_transport")
             element.text = str(self._photon_transport).lower()
 
+    def _create_proton_transport_subelement(self, root):
+        if self._proton_transport is not None:
+            element = ET.SubElement(root, "proton_transport")
+            element.text = str(self._proton_transport).lower()
+
+    def _create_proton_settings_subelement(self, root):
+        if self._proton_settings:
+            element = ET.SubElement(root, "proton_settings")
+            for key, value in self._proton_settings.items():
+                subelement = ET.SubElement(element, key)
+                if isinstance(value, bool):
+                    subelement.text = str(value).lower()
+                else:
+                    subelement.text = str(value)
+
     def _create_plot_seed_subelement(self, root):
         if self._plot_seed is not None:
             element = ET.SubElement(root, "plot_seed")
@@ -2238,6 +2294,23 @@ class Settings:
         if text is not None:
             self.photon_transport = text in ('true', '1')
 
+    def _proton_transport_from_xml_element(self, root):
+        text = get_text(root, 'proton_transport')
+        if text is not None:
+            self.proton_transport = text in ('true', '1')
+
+    def _proton_settings_from_xml_element(self, root):
+        elem = root.find('proton_settings')
+        if elem is not None:
+            for key in ('use_sph', 'use_large_angle', 'use_straggling'):
+                value = get_text(elem, key)
+                if value is not None:
+                    self.proton_settings[key] = value in ('true', '1')
+            for key in ('max_step_len', 'min_step_len', 'max_energy_loss'):
+                value = get_text(elem, key)
+                if value is not None:
+                    self.proton_settings[key] = float(value)
+
     def _uniform_source_sampling_from_xml_element(self, root):
         text = get_text(root, 'uniform_source_sampling')
         if text is not None:
@@ -2283,8 +2356,8 @@ class Settings:
         if elem is not None:
             self.cutoff = {}
             for key in ('energy_neutron', 'energy_photon', 'energy_electron',
-                        'energy_positron', 'weight', 'weight_avg', 'time_neutron',
-                        'time_photon', 'time_electron', 'time_positron',
+                        'energy_positron', 'energy_proton', 'weight', 'weight_avg',
+                        'time_neutron', 'time_photon', 'time_electron', 'time_positron',
                         'survival_normalization'):
                 value = get_text(elem, key)
                 if value is not None:
@@ -2593,6 +2666,8 @@ class Settings:
         self._create_energy_mode_subelement(element)
         self._create_max_order_subelement(element)
         self._create_photon_transport_subelement(element)
+        self._create_proton_transport_subelement(element)
+        self._create_proton_settings_subelement(element)
         self._create_uniform_source_sampling_subelement(element)
         self._create_plot_seed_subelement(element)
         self._create_ptables_subelement(element)
@@ -2712,6 +2787,8 @@ class Settings:
         settings._energy_mode_from_xml_element(elem)
         settings._max_order_from_xml_element(elem)
         settings._photon_transport_from_xml_element(elem)
+        settings._proton_transport_from_xml_element(elem)
+        settings._proton_settings_from_xml_element(elem)
         settings._uniform_source_sampling_from_xml_element(elem)
         settings._plot_seed_from_xml_element(elem)
         settings._ptables_from_xml_element(elem)

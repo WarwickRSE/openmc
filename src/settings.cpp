@@ -62,6 +62,7 @@ bool output_summary {true};
 bool output_tallies {true};
 bool particle_restart_run {false};
 bool photon_transport {false};
+bool proton_transport {true};
 bool atomic_relaxation {true};
 bool reduce_tallies {true};
 bool res_scat_on {false};
@@ -111,8 +112,8 @@ int64_t max_particles_in_flight {100000};
 int max_particle_events {1000000};
 
 ElectronTreatment electron_treatment {ElectronTreatment::TTB};
-array<double, 4> energy_cutoff {0.0, 1000.0, 0.0, 0.0};
-array<double, 4> time_cutoff {INFTY, INFTY, INFTY, INFTY};
+array<double, 5> energy_cutoff {0.0, 1000.0, 0.0, 0.0, 1.0e5};
+array<double, 5> time_cutoff {INFTY, INFTY, INFTY, INFTY, INFTY};
 int ifp_n_generation {-1};
 IFPParameter ifp_parameter {IFPParameter::None};
 int legendre_to_tabular_points {C_NONE};
@@ -135,6 +136,7 @@ double source_rejection_fraction {0.05};
 double free_gas_threshold {400.0};
 std::unordered_set<int> source_write_surf_id;
 CollisionTrackConfig collision_track_config {};
+ProtonSettings proton_settings {};
 int64_t ssw_max_particles;
 int64_t ssw_max_files;
 int64_t ssw_cell_id {C_NONE};
@@ -618,6 +620,39 @@ void read_settings_xml(pugi::xml_node root)
     }
   }
 
+  // Check for proton transport
+  if (check_for_node(root, "proton_transport")) {
+    proton_transport = get_node_value_bool(root, "proton_transport");
+  }
+
+  // Proton transport settings
+  if (check_for_node(root, "proton_settings")) {
+    xml_node node_proton = root.child("proton_settings");
+    if (check_for_node(node_proton, "use_sph")) {
+      proton_settings.use_sph = get_node_value_bool(node_proton, "use_sph");
+    }
+    if (check_for_node(node_proton, "use_large_angle")) {
+      proton_settings.use_large_angle =
+        get_node_value_bool(node_proton, "use_large_angle");
+    }
+    if (check_for_node(node_proton, "use_straggling")) {
+      proton_settings.use_straggling =
+        get_node_value_bool(node_proton, "use_straggling");
+    }
+    if (check_for_node(node_proton, "max_step_len")) {
+      proton_settings.max_step_len =
+        std::stod(get_node_value(node_proton, "max_step_len"));
+    }
+    if (check_for_node(node_proton, "min_step_len")) {
+      proton_settings.min_step_len =
+        std::stod(get_node_value(node_proton, "min_step_len"));
+    }
+    if (check_for_node(node_proton, "max_energy_loss")) {
+      proton_settings.max_energy_loss =
+        std::stod(get_node_value(node_proton, "max_energy_loss"));
+    }
+  }
+
   // Check for atomic relaxation
   if (check_for_node(root, "atomic_relaxation")) {
     atomic_relaxation = get_node_value_bool(root, "atomic_relaxation");
@@ -746,6 +781,10 @@ void read_settings_xml(pugi::xml_node root)
     if (check_for_node(node_cutoff, "energy_positron")) {
       energy_cutoff[3] =
         std::stod(get_node_value(node_cutoff, "energy_positron"));
+    }
+    if (check_for_node(node_cutoff, "energy_proton")) {
+      energy_cutoff[4] =
+        std::stod(get_node_value(node_cutoff, "energy_proton"));
     }
     if (check_for_node(node_cutoff, "time_neutron")) {
       time_cutoff[0] = std::stod(get_node_value(node_cutoff, "time_neutron"));

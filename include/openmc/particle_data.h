@@ -1,6 +1,8 @@
 #ifndef OPENMC_PARTICLE_DATA_H
 #define OPENMC_PARTICLE_DATA_H
 
+#include <tuple>
+
 #include "openmc/array.h"
 #include "openmc/constants.h"
 #include "openmc/particle_type.h"
@@ -141,6 +143,11 @@ private:
   bool rotated_ {false}; //!< Is the level rotated?
 };
 
+struct ProtonMicroXS {
+  double total {0.0};   // barns
+  double last_E {-1.0}; // eV
+};
+
 //==============================================================================
 //! Cached microscopic cross sections for a particular nuclide at the current
 //! energy
@@ -180,6 +187,31 @@ struct NuclideMicroXS {
   double ncrystal_xs {-1.0}; //!< NCrystal cross section
 };
 
+// TODO - use this for now as it stands out better. Is this the right approach?
+struct NuclideProtonMicroXS {
+  // Microscopic cross sections in barns
+  double total;      //!< total cross section
+  double absorption; //!< absorption (disappearance)
+  double loss_rate; //!< per-cm energy loss from single nuclide
+  double energy_straggling; //!per-cm ??? energy randomisation from single nuc
+
+  double elastic; //!< Rate for elastic scattering
+  double inelastic; //!< Rate for inelastic
+  bool use_inelastic; //<! Whether next event should be inelastic or not
+  std::pair<double, double> moliere_precomp; //<! The parts of the moliere pre-calc per nuclide
+
+/*  // Indicies and factors needed to compute cross sections from the data tables
+  int index_grid;       //!< Index on nuclide energy grid
+  int index_temp;       //!< Temperature index for nuclide
+  double interp_factor; //!< Interpolation factor on nuc. energy grid
+*/
+
+  // Energy and temperature last used to evaluate these cross sections.  If
+  // these values have changed, then the cross sections must be re-evaluated.
+  double last_E {0.0};       //!< Last evaluated energy
+};
+
+
 //==============================================================================
 //! Cached microscopic photon cross sections for a particular element at the
 //! current energy
@@ -207,6 +239,11 @@ struct MacroXS {
   double fission;     //!< macroscopic fission xs
   double nu_fission;  //!< macroscopic production xs
   double photon_prod; //!< macroscopic photon production xs
+  double loss_rate; //!< per-cm energy loss rate for applicable particles
+  double energy_straggling; //!per-cm ??? energy randomisation for applicable particles
+  std::tuple<double, double, double> moliere; // !<Partial calculation - multiple scattering
+  double total_elastic; // !< Total elastic rate over all nuclides in current material
+  double total_inelastic; //!<Total inelastic rate over all nucs
 
   // Photon cross sections
   double coherent;        //!< macroscopic coherent xs
@@ -493,6 +530,7 @@ private:
   // Data members -- see public: below for descriptions
 
   vector<NuclideMicroXS> neutron_xs_;
+  vector<NuclideProtonMicroXS> proton_xs_;
   vector<ElementMicroXS> photon_xs_;
   MacroXS macro_xs_;
   CacheDataMG mg_xs_cache_;
@@ -563,6 +601,7 @@ private:
   bool trace_ {false};
 
   double collision_distance_;
+  double transport_distance_;
 
   int n_event_ {0};
 
@@ -587,6 +626,11 @@ public:
     return neutron_xs_[i];
   } // Microscopic neutron cross sections
   const NuclideMicroXS& neutron_xs(int i) const { return neutron_xs_[i]; }
+  auto& proton_xs(int i)
+  {
+    return proton_xs_[i];
+  } // Microscopic proton cross sections
+  const auto& proton_xs(int i) const { return proton_xs_[i]; }
 
   // Microscopic photon cross sections
   ElementMicroXS& photon_xs(int i) { return photon_xs_[i]; }
@@ -749,6 +793,8 @@ public:
 
   // Distance to the next collision
   double& collision_distance() { return collision_distance_; }
+  // Condensed history 
+  double& transport_distance() { return transport_distance_; }
 
   // Number of events particle has undergone
   int& n_event() { return n_event_; }

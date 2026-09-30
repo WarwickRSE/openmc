@@ -20,6 +20,7 @@
 #include "openmc/urr.h"
 #include "openmc/vector.h"
 #include "openmc/wmp.h"
+#include "openmc/proton_cross_sections.h"
 
 namespace openmc {
 
@@ -130,6 +131,11 @@ public:
   array<size_t, 902> reaction_index_;      //!< Index of each reaction
   vector<int> index_inelastic_scatter_;
 
+  // PROTON TRANSPORT
+  CS_1d proton_ne_rate, proton_el_rate; // TODO - share between nuclides??
+  CS_2d proton_el_xsec;
+  CS_3d proton_ne_xsec;
+
 private:
   void create_derived(
     const Function1D* prompt_photons, const Function1D* delayed_photons);
@@ -164,8 +170,8 @@ namespace data {
 
 // Minimum/maximum transport energy for each particle type. Order corresponds to
 // transport_index() for supported transport particles.
-extern array<double, 4> energy_min;
-extern array<double, 4> energy_max;
+extern array<double, 5> energy_min;
+extern array<double, 5> energy_max;
 
 //! Minimum temperature in [K] that nuclide data is available at
 extern double temperature_min;

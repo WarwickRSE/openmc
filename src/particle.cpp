@@ -21,6 +21,7 @@
 #include "openmc/nuclide.h"
 #include "openmc/particle_data.h"
 #include "openmc/photon.h"
+#include "openmc/protons.h"
 #include "openmc/physics.h"
 #include "openmc/physics_mg.h"
 #include "openmc/random_lcg.h"
@@ -240,8 +241,10 @@ void Particle::event_calculate_xs()
 
   // Calculate microscopic and macroscopic cross sections
   if (material() != MATERIAL_VOID) {
+    // TODO - check this out - our stuff is not angle dependent I don't think
+    // so we just plug in on calculate_xs. but we are energy dependent so do we need to redo always?
     if (settings::run_CE) {
-      if (material() != material_last() || sqrtkT() != sqrtkT_last() ||
+      if (this->type().is_proton() || material() != material_last() || sqrtkT() != sqrtkT_last() ||
           density_mult() != density_mult_last()) {
         // If the material is the same as the last material and the
         // temperature hasn't changed, we don't need to lookup cross
@@ -262,6 +265,11 @@ void Particle::event_calculate_xs()
     macro_xs().absorption = 0.0;
     macro_xs().fission = 0.0;
     macro_xs().nu_fission = 0.0;
+    macro_xs().loss_rate = 0.0;
+    macro_xs().total_elastic = 0.0;
+    macro_xs().total_inelastic = 0.0;
+    macro_xs().energy_straggling = 0.0;
+    macro_xs().moliere = std::make_tuple(0.0, 0.0, 0.0);
   }
 }
 
@@ -277,6 +285,7 @@ void Particle::event_advance()
   } else if (macro_xs().total == 0.0) {
     collision_distance() = INFINITY;
   } else {
+    //NOTE : for PROTON_TRANSPORT this is the true next-single-collision distance
     collision_distance() = -std::log(prn(current_seed())) / macro_xs().total;
   }
 
@@ -285,12 +294,47 @@ void Particle::event_advance()
   double distance_cutoff =
     (time_cutoff < INFTY) ? (time_cutoff - time()) * speed : INFTY;
 
-  // Select smaller of the three distances
-  double distance =
-    std::min({boundary().distance(), collision_distance(), distance_cutoff});
+ // Select smaller of the three distances
+  double distance;
+  
+  if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
+    // PROTON_TRANSPORT - calculate the transport_distance - distance to next
+    // evaluation of condensed history step
+    // We cap this based on a maximum_energy_loss, and a range of step lengths
+    // Additional distance caps: pure step len, and energy loss len
+    // NOTE: in VOID material there are no collisions or energy loss to consider
+    const auto& proton_settings = settings::proton_settings;
+    //Distance based on maximum energy loss, with a lower bound
+    const double loss_len = std::max(
+      proton_settings.max_energy_loss / this->macro_xs().loss_rate,
+      proton_settings.min_step_len);
+    // Final distance based on material boundary, distance to next collision, the loss capped distance, and some cutoffs
+    transport_distance() =
+      std::min({collision_distance(), proton_settings.max_step_len, loss_len});
+    distance = std::min({boundary().distance(), transport_distance(), distance_cutoff});
+  }else{
+    transport_distance() = collision_distance();
+    distance = std::min({boundary().distance(), collision_distance(), distance_cutoff});
+  }
 
   // Advance particle in space and time
   this->move_distance(distance);
+  
+  // PROTON_TRANSPORT
+  if (type() == ParticleType::proton() && material() != MATERIAL_VOID) {
+
+    // Small-angle scattering - updates p.u()
+    if(settings::proton_settings.use_sph) proton_small_angle_scatter(*this);
+
+    // Energy loss in eV per cm
+    double energyLossPer = this->macro_xs().loss_rate;
+    // Energy straggling total correction (note ± eV)
+    double energyStraggle = 0.0;
+    if(settings::proton_settings.use_straggling) energyStraggle = proton_energy_straggle(*this, distance);
+    //Update the energy - subtract the loss, and the straggling. Cap energy so it cannot go -ve
+    E() = std::max(0.0, E() - energyLossPer * distance - energyStraggle);
+  }
+ 
   double dt = distance / speed;
   this->time() += dt;
   this->lifetime() += dt;
@@ -929,6 +973,25 @@ void Particle::write_restart() const
     // Close file
     file_close(file_id);
   } // #pragma omp critical
+}
+
+void Particle::update_proton_xs(int i_nuclide, double MEE_material)
+{
+  //PROTON TRANSPORT
+  //Look here to see what the per-nuclide contributions to each effect are
+  auto& micro = proton_xs(i_nuclide);
+  if (E() != micro.last_E) {
+    micro.absorption = 0.0;
+    micro.last_E = E();
+    const Nuclide& nuclide = *data::nuclides.at(i_nuclide);
+    micro.loss_rate = proton_sde::proton_bethe_bloch(nuclide, E(), MEE_material);
+    micro.energy_straggling = proton_sde::energy_straggling_sd(nuclide);
+    micro.elastic = proton_sde::rutherford_elastic_rate(nuclide, E());
+    micro.inelastic = proton_sde::non_elastic_rate(nuclide, E());
+    micro.moliere_precomp = proton_sde::moliere_scattering_precomp(nuclide, E());
+    micro.total = micro.elastic + micro.inelastic;
+  }
+  
 }
 
 void Particle::update_neutron_xs(

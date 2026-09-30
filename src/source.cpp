@@ -317,6 +317,9 @@ IndependentSource::IndependentSource(pugi::xml_node node) : Source(node)
         particle_ == ParticleType::electron() ||
         particle_ == ParticleType::positron()) {
       settings::photon_transport = true;
+    }else if(particle_ == ParticleType::proton()){
+      //If injecting protons, should transport them
+      settings::proton_transport = true;
     }
   }
   validate_particle_type(particle_, "IndependentSource");

@@ -10,12 +10,16 @@
 
 namespace openmc {
 
+enum CType{total, elastic, inelastic};
 //==============================================================================
 // Non-member functions
 //==============================================================================
 
 //! Sample a nuclide and reaction and then calls the appropriate routine
 void collision(Particle& p);
+
+//! Samples a proton reaction
+void sample_proton_reaction(Particle& p);
 
 //! Samples an incident neutron reaction
 void sample_neutron_reaction(Particle& p);
@@ -44,7 +48,7 @@ void sample_positron_reaction(Particle& p);
 //!
 //! \param[in] p Particle
 //! \return Index in the data::nuclides vector
-int sample_nuclide(Particle& p);
+int sample_nuclide(Particle& p, CType type=CType::total);
 
 //! Determine the average total, prompt, and delayed neutrons produced from
 //! fission and creates appropriate bank sites.
@@ -94,6 +98,11 @@ void sample_secondary_photons(Particle& p, int i_nuclide);
 //
 //! \param[in] p, particle to be split or rouletted with the weight window.
 void split_particle(Particle& p);
+
+// PROTON_TRANSPORT
+double proton_energy_straggle(Particle & p, double distance);
+void proton_small_angle_scatter(Particle & p);
+
 
 } // namespace openmc
 
