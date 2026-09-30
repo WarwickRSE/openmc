@@ -70,6 +70,12 @@ This needs the `PROTON_DATA` path and also needs core nuclear data files, as the
 
 > **Again for RSE:** `export OPENMC_CROSS_SECTIONS='/media/raid/MathRadData/endfb-viii.1-hdf5/cross_sections.xml'`.
 
+### Mocking
+
+Because openmc is quite involved, the cpp unit tests above do not use the real Nuclide class. Instead they use a mock class. This is done in the simple, old-fashioned way by definining this class within test_protons.cpp _before_ including protons.h. This order is important. Do not change the includes in test_protons.cpp unless you are very sure what you're doing.
+
+The cpp tests also mock-out the random number generator in favour of using pre-defined sequences which match the test-data-generator. This should be relatively self-explanatory, but again, we define a function prn _before_ including protons.h which produces a pre-determined sequence. Within protons.h we use the prn function completely normally. 
+
 ### Penetration checks
 
 - [x] Water penetration
@@ -87,6 +93,12 @@ This needs the `PROTON_DATA` path and also needs core nuclear data files, as the
 - Spherical spreading. Perhaps spot size over a large number of tracks?
 - The total number of large-angle events
 - Their angular distribution
+
+## Documentation
+
+Functions now have Doxygen interface descriptions.
+
+To make it easier to find the elements of the model, most of the proton functions are in the `openmc::proton_sde` namespace, and we have marked "PROTON_TRANSPORT" on the major changes to the code. NOTE: this does not exahustively include the Python and XML parsing for the settings.
 
 ## Reminaing TODO items
 

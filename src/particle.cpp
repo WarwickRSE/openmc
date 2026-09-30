@@ -977,7 +977,7 @@ void Particle::write_restart() const
 
 void Particle::update_proton_xs(int i_nuclide, double MEE_material)
 {
-  //PROTON TRANSPORT
+  //PROTON_TRANSPORT
   //Look here to see what the per-nuclide contributions to each effect are
   auto& micro = proton_xs(i_nuclide);
   if (E() != micro.last_E) {

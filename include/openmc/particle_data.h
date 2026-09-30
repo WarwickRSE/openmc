@@ -143,11 +143,6 @@ private:
   bool rotated_ {false}; //!< Is the level rotated?
 };
 
-struct ProtonMicroXS {
-  double total {0.0};   // barns
-  double last_E {-1.0}; // eV
-};
-
 //==============================================================================
 //! Cached microscopic cross sections for a particular nuclide at the current
 //! energy

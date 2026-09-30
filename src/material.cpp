@@ -61,7 +61,7 @@ Material::Material(pugi::xml_node node)
     name_ = get_node_value(node, "name");
   }
 
-  //PROTON TRANSPORT - Mean excitation energy
+  //PROTON_TRANSPORT - Mean excitation energy
   if (check_for_node(node, "mean_excitation_energy")) {
     mean_excitation_energy_ = std::stod(get_node_value(node, "mean_excitation_energy"));
   }
