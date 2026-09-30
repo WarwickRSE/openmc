@@ -182,7 +182,8 @@ struct NuclideMicroXS {
   double ncrystal_xs {-1.0}; //!< NCrystal cross section
 };
 
-// TODO - use this for now as it stands out better. Is this the right approach?
+// PROTON_TRANSPORT
+// The cross-section and rates for proton effects
 struct NuclideProtonMicroXS {
   // Microscopic cross sections in barns
   double total;      //!< total cross section
@@ -195,14 +196,6 @@ struct NuclideProtonMicroXS {
   bool use_inelastic; //<! Whether next event should be inelastic or not
   std::pair<double, double> moliere_precomp; //<! The parts of the moliere pre-calc per nuclide
 
-/*  // Indicies and factors needed to compute cross sections from the data tables
-  int index_grid;       //!< Index on nuclide energy grid
-  int index_temp;       //!< Temperature index for nuclide
-  double interp_factor; //!< Interpolation factor on nuc. energy grid
-*/
-
-  // Energy and temperature last used to evaluate these cross sections.  If
-  // these values have changed, then the cross sections must be re-evaluated.
   double last_E {0.0};       //!< Last evaluated energy
 };
 

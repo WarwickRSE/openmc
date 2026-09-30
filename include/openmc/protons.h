@@ -29,8 +29,6 @@ namespace openmc{
     constexpr double log_hbar = -48.7724349; // -21 * log(10) + log(4.136) - log(2 * PI); // MeV * s
     constexpr double log_c = 24.1237712; //log(29979245800);// cm / s
 
-    //TODO - move some of this into the Nuclide, Material or Particle classes?
-
     //---------Helper functions-------------------------------------
     // Functions for calculating factors used in many functions. Makes it cleaner to read
 
@@ -79,7 +77,6 @@ namespace openmc{
 
     //The micro part is just the sum of z; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
-    // TODO - rho_i/A_i is the mass fraction? Need to nail this down
     return nuclide.Z_/nuclide.A_;
   }
 
@@ -273,7 +270,7 @@ namespace openmc{
         auto direction_out_1 = acos(w[2]);
         auto direction_out_2 = atan2(w[1], w[0]);
 
-        //TODO either actualyl Fake direction in, and skip the extra checks OR pass the real direction and update it
+        //TODO Make sure this integrates properly with angle changes from large scatters
         // might not need the denominator if w unity vector
         return{cos(direction_out_1), direction_out_2};
     }
