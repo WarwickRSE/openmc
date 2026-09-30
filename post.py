@@ -9,6 +9,23 @@ def fwhm_c(x, y, peak):
     return x[indexes[-1]] - x[indexes[0]]
 
 
+def fwhm_y_for_each_x(x_centers, y_centers, heating_y):
+    """Return the FWHM along y for each x position in a 2D heating map."""
+    fwhm = np.full(x_centers.shape[0], np.nan)
+    for i, profile in enumerate(heating_y):
+        if np.all(profile == 0.0):
+            continue
+        peak = profile.max()
+        if peak <= 0.0:
+            continue
+        half_max = peak / 2.0
+        idx = np.where(profile >= half_max)[0]
+        if idx.size < 2:
+            continue
+        fwhm[i] = y_centers[idx[-1]] - y_centers[idx[0]]
+    return fwhm
+
+
 tracks = openmc.Tracks('tracks.h5')
 
 fig = plt.figure()
@@ -79,6 +96,34 @@ peak_x = x_centers[peak_ind]
 fwhm = fwhm_c(x_centers, heating_lineout, peak)
 print(peak_x, fwhm)
 
+# Compute the heating profile in y for each x position and its FWHM.
+# This keeps the z dimension summed so each x slice is a 1D profile in y.
+y_profile = heating_data.sum(axis=2)
+y_lower = mesh.lower_left[1]
+y_upper = mesh.upper_right[1]
+y_step = (y_upper - y_lower) / mesh.dimension[1]
+y_centers = np.linspace(y_lower, y_upper, mesh.dimension[1], endpoint=False)
+y_centers += 0.5 * y_step
+fwhm_y = fwhm_y_for_each_x(x_centers, y_centers, y_profile)
+print("x positions with finite y-FWHM:", np.isfinite(fwhm_y).sum())
+
+fig, ax = plt.subplots(figsize=(12, 4))
+finite = np.isfinite(fwhm_y)
+ax.plot(x_centers[finite], fwhm_y[finite], color="tab:blue", marker="o", markersize=3, label="FWHM in y")
+
+# Fit a smooth, non-linear trend to the measured FWHM values.
+coeffs = np.polyfit(x_centers[finite], fwhm_y[finite], 3)
+fit_y = np.polyval(coeffs, x_centers)
+print(coeffs)
+ax.plot(x_centers, fit_y, color="tab:red", linewidth=2, label="Cubic best-fit")
+
+ax.set_xlabel("x [cm]")
+ax.set_ylabel("FWHM in y [cm]")
+ax.set_title("Heating FWHM in y for each x position")
+ax.grid(True, alpha=0.3)
+ax.legend()
+fig.tight_layout()
+fig.savefig("heating_fwhm_y_vs_x.png", dpi=200)
 
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.plot(x_centers, heating_lineout, color="black")
@@ -91,3 +136,4 @@ peak_heating = np.max(heating_lineout)
 ax.grid(True, alpha=0.3)
 fig.tight_layout()
 fig.savefig("heating_lineout_x.png", dpi=200)
+

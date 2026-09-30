@@ -9,6 +9,21 @@ def fwhm_c(x, y, peak):
 
     return x[indexes[-1]] - x[indexes[0]]
 
+
+def fwhm_y_for_each_x(x_centers, y_centers, heating_y):
+    """Return the FWHM along y for each x position in a 2D heating map."""
+    fwhm = np.full(x_centers.shape[0], np.nan)
+    for i, profile in enumerate(heating_y):
+        peak = profile.max()
+        if peak <= 0.0:
+            continue
+
+        indexes = np.where(profile > peak / 2.0)[0]
+        if indexes.size:
+            fwhm[i] = y_centers[indexes[-1]] - y_centers[indexes[0]]
+
+    return fwhm
+
 openmc.Materials.cross_sections = '/media/raid/MathRadData/endfb-viii.1-hdf5/cross_sections.xml'
 # Data path
 proton_path = '/media/raid/MathRadData/protons/'
@@ -103,7 +118,7 @@ settings.proton_settings['use_straggling'] = True
 mesh = openmc.RegularMesh()
 mesh.lower_left = (0.0, -1.0, -1.0)
 mesh.upper_right = (xlen, 1.0, 1.0)
-mesh.dimension = (500, 40, 40)
+mesh.dimension = (500, 100, 10)
 
 heating = openmc.Tally(name="proton heating")
 heating.filters = [openmc.MeshFilter(mesh)]
@@ -182,6 +197,26 @@ peak_ind = heating_lineout.argmax(axis=0)
 peak_x = x_centers[peak_ind]
 fwhm = fwhm_c(x_centers, heating_lineout, peak)
 print(peak_x, fwhm)
+
+# Compute the heating profile in y for each x position and its FWHM.
+# This keeps the z dimension summed so each x slice is a 1D profile in y.
+y_profile = heating_data.sum(axis=2)
+y_lower = mesh.lower_left[1]
+y_upper = mesh.upper_right[1]
+y_step = (y_upper - y_lower) / mesh.dimension[1]
+y_centers = np.linspace(y_lower, y_upper, mesh.dimension[1], endpoint=False)
+y_centers += 0.5 * y_step
+fwhm_y = fwhm_y_for_each_x(x_centers, y_centers, y_profile)
+print("x positions with finite y-FWHM:", np.isfinite(fwhm_y).sum())
+
+fig, ax = plt.subplots(figsize=(12, 4))
+ax.plot(x_centers, fwhm_y, color="tab:blue", marker="o", markersize=3)
+ax.set_xlabel("x [cm]")
+ax.set_ylabel("FWHM in y [cm]")
+ax.set_title("Heating FWHM in y for each x position")
+ax.grid(True, alpha=0.3)
+fig.tight_layout()
+fig.savefig("heating_fwhm_y_vs_x.png", dpi=200)
 
 fig, ax = plt.subplots(figsize=(12, 4))
 ax.plot(x_centers, heating_lineout, color="black")
