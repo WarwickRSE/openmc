@@ -277,6 +277,7 @@ namespace openmc{
 
 
     inline double cm_to_lab_energy(const double nuc_A, const double alpha, const double e) {
+      if(e < 1e-6) return 0.0; // REMEMBER e is in MeV here. so go for 1eV, just to avoid divide-by-zero
       double mtcsq = nuc_A * mpcsq;
       double E1 = mpcsq + e;
       double p1 = std::sqrt(E1 * E1 - mpcsq * mpcsq);
