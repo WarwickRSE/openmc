@@ -1,7 +1,8 @@
 # Testing the energy loss elements of the proton transport model
 # We check overall penetration with straggling and all angular effects disabled
 # and compare overall penetration to NIST data
-# Then we check FWHM with straggling enabled and compare to ...???
+# Then we check Straggling by turning up I (Mean Excitation Energy) so that energy loss goes to zero, and compare the slope over time to the expected rate
+# See also test_proton_angles.py
 
 # These are NOT fast tests as we need to transport and score a moderate number of protons
 
@@ -54,7 +55,7 @@ def create_bone():
     bone.mean_excitation_energy = openmc.proton_data.mean_excitation_energy("bone", proton_path + "/mean_excitation_energies.txt") #eV
     return bone
 
-def create_artificial_water():
+def create_artificial_water(density):
     """ Water with standard element mix """
     proton_path = environ['OPENMC_PROTON_DATA']
      # Create materials
@@ -62,13 +63,14 @@ def create_artificial_water():
     water = openmc.Material()
     water.add_element('H', 2.0)
     water.add_element('O', 1.0)
-    water.set_density('g/cm3', 1.0)
+    if(density is None): density = 1.0
+    water.set_density('g/cm3', density)
     water.temperature = 300 # K
     water.mean_excitation_energy = 1e6 #eV - Extremely high
 
     return water
 
-def create_block(material, length):
+def create_block(material, length, density=None):
     """Create a block of specified material, [0,length] x [-1,1] x [-1,1] width""" 
 
     materials = openmc.Materials()
@@ -83,7 +85,7 @@ def create_block(material, length):
         fill = create_bone()
         materials.append(fill)
     elif(material == "fake_water"):
-        fill = create_artificial_water()
+        fill = create_artificial_water(density)
         materials.append(fill)
     else:
         raise ValueError("Material not known")
@@ -126,11 +128,11 @@ def bone_block():
     model.materials, model.geometry = create_block('bone', 30.0)
     return model
 
-def artificial_block():
+def artificial_block(density):
     """Create a block of a fake high I material, length 20cm"""
     #This is like water in terms of density etc, but has I set high so that the energy loss is very slow
     model = openmc.Model()
-    model.materials, model.geometry = create_block('fake_water', 20.0)
+    model.materials, model.geometry = create_block('fake_water', 20.0, density)
     return model
 
 
@@ -314,7 +316,7 @@ def run_model_straggled(model, xlen, energy, expected_slope):
 @pytest.mark.parametrize('energy', [50, 100, 150, 200])
 def test_proton_spread_highI(run_in_tmpdir, energy):
     """Penetration spread into a mock material with very high I, 100MeV."""
-    model = artificial_block()
+    model = artificial_block(1.0)
     xlen = 20.0  # cm
     energy = energy * 1e6
     expected_slope = expected_energy_variance_slope(
@@ -322,25 +324,14 @@ def test_proton_spread_highI(run_in_tmpdir, energy):
     )
     run_model_straggled(model, xlen, energy, expected_slope)
 
-#def test_proton_spread_highI2(run_in_tmpdir):
-#    """Penetration spread into a mock material with very high I, 100MeV."""
-#    model = artificial_block()
-
-#    energy = 100e6 # MeV
-#    xlen = 20.0  # cm
-#    expected_slope = expected_energy_variance_slope(
-#        model.materials[0], energy
-#    )
-#    run_model_straggled(model, xlen, energy, expected_slope)
-
-
-#def test_proton_spread_water(run_in_tmpdir):
-#    """Penetration spread into water at SDP for 100MeV"""
-#    model = water_block()
-#    xlen = 20.0  # cm
-#    expected_peak = 7.72  #cm https://physics.nist.gov/cgi-bin/Star/ap_table.pl
-#    energy = 100e6 # MeV
-#    expected_fwhm = 0.823  # TODO this comes from the test code doing a first pass. 
-#    run_model_straggled(model, xlen, energy, expected_peak, expected_fwhm)
-
+@pytest.mark.parametrize('energy', [50, 100, 150, 200])
+def test_proton_spread_highI_density(run_in_tmpdir, energy):
+    """Penetration spread into a mock material with very high I, 100MeV."""
+    model = artificial_block(2.0) # Density of 2
+    xlen = 20.0  # cm
+    energy = energy * 1e6
+    expected_slope = expected_energy_variance_slope(
+        model.materials[0], energy
+    )
+    run_model_straggled(model, xlen, energy, expected_slope)
 
