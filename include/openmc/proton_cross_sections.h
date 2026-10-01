@@ -61,6 +61,10 @@ struct CS_1d {
     while (getline(iss2, token, ' ')) {
       rate.push_back(atof(token.c_str()));
     }
+    file.close();
+    if(energy.size() != rate.size()){
+      throw std::runtime_error("Data file "+filename+" invalid. Energies and rates do not match in length");
+    }
   }
   CS_1d(const std::string filename, const double cuttoff) : energy(), rate() {
     std::ifstream file;
@@ -111,6 +115,9 @@ struct CS_1d {
       }
     }
     file.close();
+    if(energy.size() != rate.size()){
+      throw std::runtime_error("Data file "+filename+" invalid. Energies and rates do not match in length");
+    }
   }
 
   CS_1d(const CS_1d &other) : energy(other.energy), rate(other.rate) {}
@@ -183,21 +190,24 @@ struct CS_1d {
       rate.push_back(total_rate);
     }
     file.close();
+    if(energy.size() != rate.size()){
+      throw std::runtime_error("Data file "+filename+" invalid. Energies and rates do not match in length");
+    }
   }
 
   CS_1d() : energy(), rate() {}
 
   double evaluate(const double e) const {
     if (energy.size() > 0) {
-      if (e <= energy[0]) {
+      // Find cell
+      int i_r = std::distance(energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
+      if (i_r == 0){
         return rate[0];
-      } else if (e >= energy.back()) {
+      } else if (i_r  == int(rate.size())){
         return rate.back();
       } else {
-        // Find cell
-        int r = std::distance(energy.begin(), std::lower_bound(energy.begin(), energy.end(), e));
-        // Interpolate within cell
-        return interp(rate[r-1], rate[r], (e - energy[r-1]), (energy[r] - energy[r-1]));
+       // Interpolate within cell
+        return interp(rate[i_r-1], rate[i_r], (e - energy[i_r-1]), (energy[i_r] - energy[i_r-1]));
       }
     }else{
       return 0.0;
@@ -245,6 +255,21 @@ struct CS_3d {
       rvalue.push_back(tmp_vec);
     }
     file.close();
+    if (energy.size() != exit_energy.size() || energy.size() != cdf.size() ||
+        energy.size() != rvalue.size()) {
+      throw std::runtime_error("Data file " + filename +
+                               " invalid. Energy, exit-energy, CDF, and "
+                               "r-value slice counts do not match");
+    }
+    for (std::size_t i = 0; i < energy.size(); ++i) {
+      if (exit_energy[i].size() != cdf[i].size() ||
+          exit_energy[i].size() != rvalue[i].size()) {
+        throw std::runtime_error("Data file " + filename + " invalid. "
+                                 "Energy slice " + std::to_string(i) +
+                                 " has mismatched exit-energy, CDF, and "
+                                 "r-value lengths");
+      }
+    }
   }
 
   CS_3d(const CS_3d &other)
@@ -254,6 +279,7 @@ struct CS_3d {
   CS_3d() : energy(), exit_energy(), cdf(), rvalue() {}
   
   CS_3d & operator=(const CS_3d & other){energy=other.energy; exit_energy=other.exit_energy; cdf=other.cdf;rvalue=other.rvalue; return *this;}
+
 
   //! Sample from selected slice
   // ! Interpolate energy and r based on position in cdf
@@ -361,6 +387,18 @@ struct CS_2d {
       cdf.push_back(tmp_vec);
     }
     file.close();
+    if (energy.size() != exit_angle.size() || energy.size() != cdf.size()) {
+      throw std::runtime_error("Data file " + filename +
+                               " invalid. Energy, exit-angle, and CDF "
+                               "slice counts do not match");
+    }
+    for (std::size_t i = 0; i < energy.size(); ++i) {
+      if (exit_angle[i].size() != cdf[i].size()) {
+        throw std::runtime_error("Data file " + filename + " invalid. "
+                                 "Energy slice " + std::to_string(i) +
+                                 " has mismatched exit-angle and CDF lengths");
+      }
+    }
   }
 
   CS_2d(const std::string filename, const double cuttoff,
@@ -437,6 +475,18 @@ struct CS_2d {
       cdf.push_back(tmp_vec);
     }
     file.close();
+    if (energy.size() != exit_angle.size() || energy.size() != cdf.size()) {
+      throw std::runtime_error("Data file " + filename +
+                               " invalid. Energy, exit-angle, and CDF "
+                               "slice counts do not match");
+    }
+    for (std::size_t i = 0; i < energy.size(); ++i) {
+      if (exit_angle[i].size() != cdf[i].size()) {
+        throw std::runtime_error("Data file " + filename + " invalid. "
+                                 "Energy slice " + std::to_string(i) +
+                                 " has mismatched exit-angle and CDF lengths");
+      }
+    }
   }
 
   CS_2d(const CS_2d &other)
