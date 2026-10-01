@@ -77,7 +77,7 @@ namespace openmc{
 
     //The micro part is just the sum of z; and can be cached, electrons per average molecule in this material
     //The REST is based on the energy
-    return nuclide.Z_/nuclide.A_;
+    return nuclide.Z_; ///nuclide.A_;
   }
 
     //! Scattering rate for inelastic scattering

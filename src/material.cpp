@@ -881,7 +881,8 @@ void Material::calculate_proton_xs(Particle& p) const
     // TODO follow-up - this can occur due to I being too large, as well as energy too small
     //Energy straggling- summing per-nuclide contribution
     // THIS IS NOT in barns
-    p.macro_xs().energy_straggling += micro.energy_straggling;
+   // p.macro_xs().energy_straggling += micro.energy_straggling;
+    p.macro_xs().energy_straggling += atom_density / N_AVOGADRO * micro.energy_straggling;
     //
     total_density += atom_density * A;
 
