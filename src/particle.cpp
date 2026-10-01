@@ -309,8 +309,16 @@ void Particle::event_advance()
       proton_settings.max_energy_loss / this->macro_xs().loss_rate,
       proton_settings.min_step_len);
     // Final distance based on material boundary, distance to next collision, the loss capped distance, and some cutoffs
+    // IMPORTANT
+    /* Boundary crossing logic in CSG is complex, in particular to prevent crossing and re-crossing
+    the same surface again and again. In a stochastic setting, it is extremely unlikely for a particle to land very close to a surface but NOT "exactly" on it. There is an edge case through
+    the logic where this can occur when we do the discretisation - but only if our step length is an integer
+    fraction of our region length, AND we have no effects other than the fixed stepping (i.e. no angular deviation). In this case the 'nearby' logic triggers in a way which never crosses the surface while reporting it being very far away. The particle teleports through and carries on, but with parameters for the wrong material AND/OR a position outside the domain.
+    The proper fix is not within scope. The hack here simply adjusts the max step length by a random jitter to reduce the chance of triggering the bug back to "extremely unlikely".
+    */
+    double max_step = proton_settings.max_step_len * (1.0 + 1e-5 * (prn(current_seed()) - 0.5)); 
     transport_distance() =
-      std::min({collision_distance(), proton_settings.max_step_len, loss_len});
+      std::min({collision_distance(), max_step, loss_len});
     distance = std::min({boundary().distance(), transport_distance(), distance_cutoff});
   }else{
     transport_distance() = collision_distance();
