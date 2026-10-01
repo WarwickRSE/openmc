@@ -873,8 +873,12 @@ void Material::calculate_proton_xs(Particle& p) const
     //Rates here need to be multiplied by the correct form of the partial density
     //and converted from barns if neccessary
     // Total energy loss
-    p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
-
+    if(micro.loss_rate > 0){
+      // This probably means the equation has gone wrong, since this should not happen. Cap it here to avoid energy gain
+      p.macro_xs().loss_rate += atom_density / N_AVOGADRO * micro.loss_rate;
+    }
+    //TODO URGENT - should we kill particle when it goes out of model validity?
+    // TODO follow-up - this can occur due to I being too large, as well as energy too small
     //Energy straggling- summing per-nuclide contribution
     // THIS IS NOT in barns
     p.macro_xs().energy_straggling += micro.energy_straggling;
